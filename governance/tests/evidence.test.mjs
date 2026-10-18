@@ -103,3 +103,24 @@ test('#3 (CT-0010) any future or invalid freshness timestamp is UNKNOWN, never P
   assert.equal(freshnessState(NaN, 3_600_000, now), 'UNKNOWN');
   assert.equal(freshnessState('2026-10-18', 3_600_000, now), 'UNKNOWN');
 });
+
+test('CT-0010 acceptance: freshnessState boundary and input matrix', () => {
+  const now = Date.parse('2026-10-18T12:00:00Z');
+  const maxAge = 3_600_000;
+  // Future by any amount never passes.
+  assert.equal(freshnessState(now + 1, maxAge, now), 'UNKNOWN', '+1 ms');
+  assert.equal(freshnessState(now + 60_000, maxAge, now), 'UNKNOWN', '+1 min');
+  assert.equal(freshnessState(now + 3_600_000, maxAge, now), 'UNKNOWN', '+1 h');
+  // Documented boundaries: exactly now is not future; age exactly maxAge is still fresh.
+  assert.equal(freshnessState(now, maxAge, now), 'PASS', 'timestamp === now');
+  assert.equal(freshnessState(now - maxAge, maxAge, now), 'PASS', 'age === maxAge');
+  assert.equal(freshnessState(now - maxAge - 1, maxAge, now), 'STALE', 'age === maxAge + 1 ms');
+  // Valid past timestamps keep PASS / STALE.
+  assert.equal(freshnessState(now - 60_000, maxAge, now), 'PASS', 'recent');
+  assert.equal(freshnessState(now - 7_200_000, maxAge, now), 'STALE', 'expired');
+  // Missing, non-numeric and non-finite inputs.
+  for (const [label, value] of [['undefined', undefined], ['null', null], ['string', '2026-10-18T11:00:00Z'],
+    ['numeric string', String(now - 60_000)], ['NaN', NaN], ['Infinity', Infinity], ['-Infinity', -Infinity], ['object', {}]]) {
+    assert.equal(freshnessState(value, maxAge, now), 'UNKNOWN', label);
+  }
+});

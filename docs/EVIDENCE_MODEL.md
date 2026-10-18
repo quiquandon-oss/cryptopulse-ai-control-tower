@@ -66,10 +66,17 @@ Olivier's decision to merge anyway is recorded on the PR.
 
 ### Freshness check
 
-`freshnessState(timestamp, maxAge)`: `PASS` if newer than `maxAge`, `STALE`
-if older, and `UNKNOWN` if the timestamp is missing, not a finite number, or
-**later than now by any amount** — evidence dated in the future cannot be
-trusted, so there is deliberately no clock-skew tolerance.
+`freshnessState(timestamp, maxAge, now)`:
+
+| Input | State |
+|---|---|
+| Missing, non-numeric (incl. numeric strings), `NaN`, `±Infinity` | `UNKNOWN` |
+| **Later than `now` by any amount** (even 1 ms) | `UNKNOWN` |
+| `now − maxAge ≤ timestamp ≤ now` (boundaries inclusive) | `PASS` |
+| `timestamp < now − maxAge` | `STALE` |
+
+**Future timestamps never pass.** There is deliberately no clock-skew
+tolerance: evidence dated in the future cannot be trusted (finding CT-0010).
 
 ### Mapping from the Control Tower UI
 
