@@ -16,7 +16,8 @@ export function knowledgeView() {
     card('Governance', h('ul', { class: 'doclist' },
       doc('docs/AI_CONTROL_TOWER_MASTER.md', 'Master protocol', 'Roles, SOP, V1–V4 boundaries.'),
       doc('docs/AI_REVIEWER_CHARTER.md', 'Reviewer charter', 'ChatGPT review criteria and comment format.'),
-      doc('docs/CLAUDE_CODE_SETUP.md', 'Claude Code setup', 'Developer workflow, Plan Mode, branch strategy.'))),
+      doc('docs/CLAUDE_CODE_SETUP.md', 'Claude Code setup', 'Developer workflow, Plan Mode, branch strategy.'),
+      doc('docs/EVIDENCE_MODEL.md', 'Evidence model & review ledger', 'Release gate states and the findings ledger rules.'))),
     card('Design reference', h('figure', { class: 'mockup' },
       h('img', { src: '../docs/assets/control-tower-mockup.png', alt: 'Control Tower reference mockup', loading: 'lazy' }),
       h('figcaption', { class: 'muted' }, 'docs/assets/control-tower-mockup.png'))));
