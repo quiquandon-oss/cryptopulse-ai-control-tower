@@ -16,9 +16,20 @@ export function workflowView(state, route, ctx) {
   if (!task) return h('p', { class: 'muted' }, 'No tasks yet.');
 
   const current = activeGateIndex(task);
-  return h('div', { class: 'workflow' },
+  const pane = ctx.ui.workflowPane;
+  // Phones show one pane at a time (CSS hides the other below 820px);
+  // larger screens always show both and hide this switch.
+  const paneSwitch = h('div', { class: 'segmented', role: 'tablist', 'aria-label': 'Workflow sections' },
+    [['gates', 'Gates'], ['details', 'Details & CI']].map(([id, label]) => h('button', {
+      class: `segmented__btn${pane === id ? ' is-active' : ''}`,
+      type: 'button', role: 'tab', 'aria-selected': String(pane === id),
+      onClick: () => ctx.setWorkflowPane(id),
+    }, label)));
+
+  return h('div', { class: `workflow workflow--pane-${pane}` },
     h('div', { class: 'workflow__main' },
       taskHeader(state, task, ctx),
+      paneSwitch,
       h('ol', { class: 'gates' },
         GATE_STEPS.map((step, i) => (i === 4
           ? finalGate(task, i, current, ctx)

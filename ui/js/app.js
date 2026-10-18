@@ -7,6 +7,7 @@ import { h } from './dom.js';
 import { createStore } from './state.js';
 import { header } from './components/header.js';
 import { sidebar } from './components/sidebar.js';
+import { bottomNav } from './components/bottomnav.js';
 import { workflowView } from './views/workflow.js';
 import { tasksView, newTaskView } from './views/tasks.js';
 import { dashboardView, agentsView, repositoriesView, prsView } from './views/overview.js';
@@ -50,7 +51,11 @@ function navigate(hash) {
   else location.hash = hash;
 }
 
-const ctx = { store, toast, navigate };
+// View-only UI state (not persisted): which Workflow pane phones show.
+const ui = { workflowPane: 'gates' };
+const setWorkflowPane = (pane) => { ui.workflowPane = pane; render(); };
+
+const ctx = { store, toast, navigate, ui, setWorkflowPane };
 
 function render() {
   const route = parseRoute();
@@ -71,7 +76,8 @@ function render() {
       sidebar(state, route, { open: menuOpen, onNavigate: closeMenu }),
       // Backdrop closes the off-canvas menu on small screens.
       menuOpen && h('button', { class: 'backdrop', type: 'button', 'aria-label': 'Close navigation', onClick: () => { menuOpen = false; render(); } }),
-      h('main', { class: 'content', id: 'main' }, VIEWS[route.view](state, route, ctx))));
+      h('main', { class: 'content', id: 'main' }, VIEWS[route.view](state, route, ctx))),
+    bottomNav(state, route));
 }
 
 // Service worker enables install + offline use. Browsers only allow it on
