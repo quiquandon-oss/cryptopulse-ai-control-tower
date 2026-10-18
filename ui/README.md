@@ -10,22 +10,61 @@ local mock state in `js/state.js`; clicks are kept in your browser's
 localStorage and can be cleared under **Settings → Reset mock data**.
 Nothing here touches GitHub, Cloudflare, or any CryptoPulse repository.
 
+## Try it
+
+**Live (GitHub Pages):** https://quiquandon-oss.github.io/cryptopulse-ai-control-tower/ui/
+Redeployed automatically on every merge to `main` that touches `ui/`, `docs/` or `tasks/`.
+
+**Install on a phone**
+- Android / Chrome: open the link → **⋮** → **Install app** (or *Add to Home screen*).
+- iPhone: open the link in **Safari** → **Share** → **Add to Home Screen**.
+
+The installed app opens full-screen and works offline (service worker in `sw.js`).
+
 ## Run locally
 
-ES modules need an HTTP server (not `file://`). Serve the **repo root** so the
-Knowledge Base links to `../docs` and `../tasks` resolve:
+Requires only Python 3 (no install step). From the repo root:
 
 ```bash
-python3 -m http.server 8000
-# open http://localhost:8000/ui/
+python3 ui/serve.py            # http://127.0.0.1:8000/ui/  (this computer only)
+python3 ui/serve.py --lan      # also prints a URL for a phone on the same Wi-Fi
+python3 ui/serve.py --port 9000
 ```
+
+`serve.py` serves only `ui/`, `docs/` and `tasks/`; `.git`, dotfiles, path
+traversal and directory listings return 404, so `--lan` never exposes the
+repository. Stop with **Ctrl+C**.
+
+Phone preview over `--lan` uses plain HTTP, so it runs but cannot be
+*installed* (browsers require HTTPS for that). Use the GitHub Pages link to
+install.
+
+### Mobile test in desktop Chrome
+1. Open the local URL, press **F12** → device toolbar (**Ctrl+Shift+M**).
+2. Pick a phone (e.g. Pixel 7, iPhone SE) and reload.
+3. Check: bottom tab bar, **Gates / Details & CI** switch on Workflow,
+   ☰ menu, no sideways scrolling.
+
+## Mobile behaviour (≤ 820 px)
+
+- **Bottom tab bar:** Workflow, Tasks, Agents, Metrics, with badges for open
+  tasks and agents waiting on a gate. Respects the iPhone home-indicator area.
+- **Workflow pane switch:** *Gates* or *Details & CI* (task info, PR, CI,
+  deployment), one at a time instead of one long scroll.
+- **Touch targets** ≥ 44 px on touch screens; form fields use 16 px text so
+  iOS does not zoom on focus; Gate 5 options stack vertically.
+- Full section list stays available from the ☰ menu.
 
 ## Structure
 
 ```
 ui/
-├── index.html              # Shell + CSP
-├── css/styles.css          # Dark theme, responsive breakpoints (1280 / 1100 / 820 px)
+├── index.html              # Shell + CSP + manifest link
+├── manifest.webmanifest    # Installable app metadata
+├── sw.js                   # Service worker (install + offline)
+├── serve.py                # Restricted local preview server
+├── icons/                  # App icons (192, 512, maskable)
+├── css/styles.css          # Dark theme, breakpoints (1280 / 1100 / 820 px), touch sizing
 └── js/
     ├── app.js              # Hash router, layout, toast, render loop
     ├── state.js            # Mock data, derived status, observable store
@@ -33,6 +72,7 @@ ui/
     ├── components/
     │   ├── header.js       # Brand, primary tabs, mode indicator, user
     │   ├── sidebar.js      # Navigation with counters, supported agents
+    │   ├── bottomnav.js    # Phone-only bottom tab bar
     │   └── rail.js         # Task info, Repository & PR, CI/Tests, Deployment
     └── views/
         ├── workflow.js     # Five human gates for one task (main mockup screen)

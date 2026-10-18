@@ -15,11 +15,15 @@ Standard library only; no install step.
 import argparse
 import functools
 import http.server
+import mimetypes
 import socket
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ALLOWED_PREFIXES = ("/ui/", "/docs/", "/tasks/")
+
+# Python's table lacks the web app manifest type Chrome expects.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
 class TestbedHandler(http.server.SimpleHTTPRequestHandler):

@@ -4,7 +4,7 @@
 // deployed files; offline the last cached copy still opens. Only same-origin
 // GET requests are handled (the app makes no other requests).
 
-const CACHE = 'ct-ui-v1';
+const CACHE = 'ct-ui-v2';
 const SHELL = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const SHELL = [
   './js/components/header.js',
   './js/components/sidebar.js',
   './js/components/rail.js',
+  './js/components/bottomnav.js',
   './js/views/workflow.js',
   './js/views/tasks.js',
   './js/views/overview.js',
