@@ -215,13 +215,17 @@
       "commit_sha": "6cc0b0d88f85dfac6f9a8db7bd4f541d2cfe6d05",
       "description": "CI checks (Node tests, Python tests, Browser smoke) report on pull requests but are not required: no branch protection or ruleset on main enforces them, so a PR can still be merged with failing or missing checks.",
       "severity": "medium",
-      "status": "open",
-      "verification_method": "",
-      "timestamp": "2026-10-18T17:17:59Z",
-      "reviewer": "Olivier",
+      "status": "fixed",
+      "verification_method": "Fix applied by Olivier in repository settings (no commit): ruleset 25350881, enforcement active, target default branch, no bypass actors; rules deletion, non_fast_forward and required_status_checks = Node tests, Python tests, Browser smoke (all integration 15368, GitHub Actions). First version required \"Node test\" (no such check): PR #10 was mergeable_state \"blocked\" with all three checks green on 1aeb469 (run 39150136211). After Olivier corrected it to \"Node tests\" (ruleset updated 2026-10-18T17:37:30Z), GET /rules/branches/main returns the three checks and PR #10 became \"clean\" with no new commit. Read back via the GitHub API by Claude. Author-checked only; awaiting ChatGPT independent re-review.",
+      "timestamp": "2026-10-18T17:38:50Z",
+      "reviewer": "Claude",
       "found_at": "2026-10-18T17:17:59Z",
       "fix_commit_sha": null,
-      "pr": 9
+      "pr": 9,
+      "related_prs": [
+        10
+      ],
+      "fix_reference": "GitHub ruleset 25350881 \"main: require CI checks\" (configured by Olivier)"
     },
     {
       "finding_id": "CT-0014",

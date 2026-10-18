@@ -73,6 +73,7 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
     if ('status' in f && !PROPS.status.enum.includes(f.status)) err(at, `status must be one of ${PROPS.status.enum.join(', ')}`);
     if (typeof f.commit_sha === 'string' && !SHA.test(f.commit_sha)) err(at, 'commit_sha must be a full 40-hex SHA');
     if (f.fix_commit_sha != null && (typeof f.fix_commit_sha !== 'string' || !SHA.test(f.fix_commit_sha))) err(at, 'fix_commit_sha must be a full 40-hex SHA or null');
+    if ('fix_reference' in f && (typeof f.fix_reference !== 'string' || !f.fix_reference.trim()) && f.fix_reference !== '') err(at, 'fix_reference must be a non-empty string');
     for (const key of ['timestamp', 'found_at']) {
       if (!(key in f)) continue;
       if (typeof f[key] !== 'string' || !TS.test(f[key])) err(at, `${key} must be UTC ISO 8601 (YYYY-MM-DDTHH:MM:SSZ)`);
@@ -97,9 +98,12 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
 
     // R3–R6 — status-dependent evidence.
     const method = typeof f.verification_method === 'string' ? f.verification_method.trim() : '';
-    if (f.status === 'open' && f.fix_commit_sha) err(at, 'open findings must not have a fix_commit_sha (R3)');
+    // A fix is a commit, or — for non-code fixes such as repository settings —
+    // an explicit fix_reference (e.g. a ruleset id). Never neither.
+    const hasFixRef = typeof f.fix_reference === 'string' && f.fix_reference.trim() !== '';
+    if (f.status === 'open' && (f.fix_commit_sha || hasFixRef)) err(at, 'open findings must not have a fix_commit_sha or fix_reference (R3)');
     if (['fixed', 'verified'].includes(f.status)) {
-      if (!f.fix_commit_sha) err(at, `${f.status} requires fix_commit_sha (R4)`);
+      if (!f.fix_commit_sha && !hasFixRef) err(at, `${f.status} requires fix_commit_sha or fix_reference (R4)`);
       if (!method) err(at, `${f.status} requires verification_method (R4)`);
     }
     if (f.status === 'verified') {

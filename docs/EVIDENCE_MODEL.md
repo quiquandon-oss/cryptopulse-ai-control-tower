@@ -114,6 +114,7 @@ and an ID is never reused.
 | `reviewer` | ✔ | Who established the current status — one of the controlled identities below |
 | `found_at` |  | UTC time the finding was first raised |
 | `fix_commit_sha` |  | Full SHA of the fixing commit, or `null` |
+| `fix_reference` |  | For non-code fixes (e.g. GitHub settings): what was changed, precisely (e.g. `GitHub ruleset 25350881`) |
 | `pr` |  | Pull request number where the finding was raised |
 | `related_prs` |  | Other PRs where it was fixed or verified (unique, must not repeat `pr`) |
 | `source_url` |  | Link to the review comment that raised it |
@@ -155,8 +156,8 @@ open ──fix pushed──▶ fixed ──independent re-review──▶ verifi
 |---|---|
 | R1 | Shape: required fields present, no unknown fields, types, enums and patterns as in the schema; timestamps must be **real UTC instants** (`2026-02-30…`, `…T24:00:00Z` are rejected) |
 | R2 | `finding_id` unique |
-| R3 | `open` ⇒ no `fix_commit_sha` |
-| R4 | `fixed` / `verified` ⇒ `fix_commit_sha` and a non-empty `verification_method` |
+| R3 | `open` ⇒ no `fix_commit_sha` and no `fix_reference` |
+| R4 | `fixed` / `verified` ⇒ a `fix_commit_sha` **or**, for non-code fixes such as repository settings, a `fix_reference` (e.g. a ruleset id) — never neither — and a non-empty `verification_method` |
 | R5 | `verified` ⇒ reviewer is an independent verifier (`ChatGPT` or `Olivier`, never the developer `Claude` or the planner `Gemini`) **and** `verification_url` links to the verifying review on the finding's `pr` or one of its `related_prs` (a review on any other PR is rejected) |
 | R6 | `accepted_risk` ⇒ reviewer is `Olivier`, rationale given, severity not `critical` |
 | R7 | `found_at` ≤ `timestamp`; neither `timestamp` nor `found_at` may be later than the validator's clock — **no tolerance** (CT-0014) |

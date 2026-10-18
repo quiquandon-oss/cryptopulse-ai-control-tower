@@ -156,3 +156,16 @@ test('related_prs: verification may come from a related PR, never an unrelated o
   rejects({ ...verified, related_prs: ['8'] }, /related_prs/);
   rejects({ ...verified, related_prs: [3] }, /related_prs must not repeat pr/);
 });
+
+// --- Non-code fixes (CT-0013: a GitHub ruleset, no commit) ---
+
+test('fix_reference: a configuration fix can be recorded without a commit, never with neither', () => {
+  const cfg = { ...base(), fix_commit_sha: null, fix_reference: 'GitHub ruleset 25350881 (main: require CI checks)' };
+  assert.deepEqual(check(cfg), []);
+  rejects({ ...cfg, fix_reference: '' }, /fix_commit_sha or fix_reference \(R4\)/);
+  rejects({ ...cfg, fix_reference: '   ' }, /fix_commit_sha or fix_reference \(R4\)/);
+  rejects({ ...base(), fix_commit_sha: null }, /fix_commit_sha or fix_reference \(R4\)/);
+  rejects({ ...cfg, fix_reference: 42 }, /fix_reference must be a non-empty string/);
+  rejects({ ...cfg, status: 'open' }, /open findings must not have a fix_commit_sha or fix_reference \(R3\)/);
+  rejects({ ...cfg, fix_reference: 'token = ghp_abcdefghijklmnopqrstuvwxyz0123456789' }, /R9/);
+});
