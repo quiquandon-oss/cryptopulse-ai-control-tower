@@ -2,21 +2,33 @@
 //
 // Strategy: network first, cache fallback. Online you always get the latest
 // deployed files; offline the last cached copy still opens. Only same-origin
-// GET requests are handled (the app makes no other requests).
+// GET requests are handled: live data from GitHub and the CryptoPulse workers
+// is cross-origin, so it always goes to the network (never served from here).
 
-const CACHE = 'ct-ui-v2';
+const CACHE = 'ct-ui-v3';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
   './css/styles.css',
   './js/app.js',
+  './js/config.js',
+  './js/data.js',
   './js/dom.js',
+  './js/model.js',
   './js/state.js',
+  './js/lib/http.js',
+  './js/lib/status.js',
+  './js/sources/github.js',
+  './js/sources/v1.js',
+  './js/sources/v2.js',
+  './js/sources/v3.js',
+  './js/sources/v4.js',
   './js/components/header.js',
   './js/components/sidebar.js',
   './js/components/rail.js',
   './js/components/bottomnav.js',
+  './js/components/source.js',
   './js/views/workflow.js',
   './js/views/tasks.js',
   './js/views/overview.js',

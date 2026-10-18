@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <!-- Strict CSP: only same-origin scripts/styles/images, no network calls. -->
+  <!-- Strict CSP: same-origin code only; network limited to the read-only data
+       sources allow-listed in js/config.js (GitHub API/raw + CryptoPulse workers). -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://sentiment-ff75.quiquandon.workers.dev https://pulseworker-v2.quiquandon.workers.dev https://cryptopulse-v4.quiquandon.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>AI Control Tower</title>
   <!-- Installable web app (Chrome "Install app" / "Add to Home screen"). -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -15,9 +16,9 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <!-- Everything is rendered by js/app.js from local mock state (js/state.js). -->
+  <!-- Everything is rendered by js/app.js from live read-only sources (js/state.js). -->
   <div id="app" class="app">
-    <noscript>The Control Tower UI test needs JavaScript enabled.</noscript>
+    <noscript>The AI Control Tower needs JavaScript enabled.</noscript>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="js/app.js"></script>
