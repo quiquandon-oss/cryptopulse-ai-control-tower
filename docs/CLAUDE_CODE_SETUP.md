@@ -22,5 +22,6 @@ When an active task file is picked up from `tasks/active/` (or assigned via the 
 ## 4. Guardrails & Restrictions
 
 - **No Direct Merges:** Do not merge code directly into `main`. All PRs must undergo review per the AI Control Tower governance framework.
+- **Merge Authorization:** Claude may merge a reviewed PR only on explicit authorization from Olivier. Before merging, confirm the PR has no conflicts and its head is the commit that was reviewed. Reviewer approval or Gemini's recommendation alone is not authorization.
 - **Credential Safety:** Never hardcode API secrets, database tokens, or private keys into source code or configuration files. Always rely on environment bindings and secret management tools.
 - **Scope Discipline:** Keep modifications strictly bounded to the target project version (V1, V2, V3, or V4) specified in the task file.
