@@ -74,6 +74,12 @@ function render() {
       h('main', { class: 'content', id: 'main' }, VIEWS[route.view](state, route, ctx))));
 }
 
+// Service worker enables install + offline use. Browsers only allow it on
+// HTTPS or localhost; elsewhere the app still runs, just not installable.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch((err) => console.warn('Service worker not registered:', err));
+}
+
 store.subscribe(render);
 window.addEventListener('hashchange', () => { menuOpen = false; render(); window.scrollTo(0, 0); });
 render();
