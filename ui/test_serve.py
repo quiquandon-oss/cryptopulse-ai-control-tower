@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from serve import REPO_ROOT, TestbedHandler  # noqa: E402
+from serve import REPO_ROOT, TestbedHandler, is_safe_url_path  # noqa: E402
 
 
 class ServeRestrictionsTest(unittest.TestCase):
@@ -64,6 +64,9 @@ class ServeRestrictionsTest(unittest.TestCase):
             "/%2egit/config", "/ui/%2egitignore", "/docs/%2e%2e/%2e%2e/etc/passwd",
             # encoded slash
             "/ui/..%2f.git/config", "/ui/%2e%2e%2f%2egit%2fconfig",
+            # encoded backslash (Windows separator) and NUL
+            "/ui/x%5C..%5C..%5C.git%5Cconfig", "/ui/..%5C.git%5Cconfig",
+            "/ui/index.html%00.md",
             # directory listings
             "/ui/js/", "/docs/",
         ]
@@ -72,6 +75,25 @@ class ServeRestrictionsTest(unittest.TestCase):
                 status, _, body = self.get(path)
                 self.assertEqual(status, 404, f"{path} returned {status}")
                 self.assertNotIn(b"[core]", body)
+
+
+class SafePathHelperTest(unittest.TestCase):
+    """Platform-independent checks of the path filter itself (no server)."""
+
+    def test_safe_paths(self):
+        for path in ("/ui/", "/ui/js/app.js", "/docs/AI_REVIEWER_CHARTER.md", "/ui/icons/icon-192.png"):
+            with self.subTest(path=path):
+                self.assertTrue(is_safe_url_path(path))
+
+    def test_unsafe_paths(self):
+        for path in (
+            "/ui/../.git/config", "/.git/HEAD", "/ui/.hidden",
+            "/ui/%2e%2e/%2egit/config", "/ui/%2Egit",
+            "/ui/x\\..\\.git\\config", "/ui/x%5C..%5C.git%5Cconfig", "/ui/%5c",
+            "/ui/a%00b",
+        ):
+            with self.subTest(path=path):
+                self.assertFalse(is_safe_url_path(path))
 
 
 if __name__ == "__main__":

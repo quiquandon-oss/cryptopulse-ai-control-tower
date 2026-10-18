@@ -27,6 +27,22 @@ ALLOWED_DIRS = tuple((REPO_ROOT / d).resolve() for d in ("ui", "docs", "tasks"))
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
+def is_safe_url_path(path):
+    """True if a URL path is safe to map onto the file system.
+
+    Checks the *decoded* path, since translate_path() percent-decodes (so a
+    raw check would miss %2e%2e for .. and %2egit for .git):
+    - backslashes are refused outright -- they are path separators on
+      Windows and could hide ..\\.git inside one URL component;
+    - NUL bytes are refused;
+    - any component starting with "." (traversal or hidden file) is refused.
+    """
+    decoded = urllib.parse.unquote(path)
+    if "\\" in decoded or "\x00" in decoded:
+        return False
+    return not any(part.startswith(".") for part in decoded.split("/") if part)
+
+
 class TestbedHandler(http.server.SimpleHTTPRequestHandler):
     """Static handler restricted to ALLOWED_DIRS, no directory listings."""
 
@@ -35,11 +51,7 @@ class TestbedHandler(http.server.SimpleHTTPRequestHandler):
 
     def _is_allowed(self):
         path = self._path_only()
-        # Check the *decoded* path: translate_path() percent-decodes, so a raw
-        # check would miss %2e%2e (..) and %2egit (.git). Any component that
-        # starts with "." -- traversal or hidden file -- is refused.
-        decoded = urllib.parse.unquote(path)
-        if any(part.startswith(".") for part in decoded.split("/") if part):
+        if not is_safe_url_path(path):
             return False
         # The file actually served must sit inside an allowed folder
         # (resolve() also follows symlinks), not merely inside the repo.
