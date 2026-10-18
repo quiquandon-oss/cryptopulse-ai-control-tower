@@ -44,14 +44,32 @@ can merge anyway — that is a human decision, recorded on the PR, not a `PASS`.
 
 ### Review-findings check
 
-`findingsState(ledger, repository)`:
+`findingsGate(ledger, repository)` returns the state **and** the findings
+behind it (`blocking`, `unverified`, `acceptedRisks`, `openLow`), so nothing
+passes silently. `findingsState()` returns the state only.
 
-| Condition | State |
-|---|---|
-| Ledger missing or unreadable | `UNAVAILABLE` |
-| Any **open** finding of severity `critical`, `high` or `medium` | `FAIL` |
-| Any `critical`/`high` finding that is only `fixed` (not yet `verified`) | `UNKNOWN` |
-| Otherwise (open `low`/`info` findings are allowed but listed) | `PASS` |
+| Status \ severity | `critical` | `high` | `medium` | `low` | `info` |
+|---|---|---|---|---|---|
+| `open` | `FAIL` | `FAIL` | `FAIL` | `PASS`¹ | `PASS`¹ |
+| `fixed` (author-checked, not independently verified) | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `PASS`¹ | `PASS`¹ |
+| `verified` | `PASS` | `PASS` | `PASS` | `PASS` | `PASS` |
+| `accepted_risk` | n/a² | `FAIL`³ | `FAIL`³ | `PASS`¹ | `PASS`¹ |
+
+Ledger missing or unreadable → `UNAVAILABLE`. The worst state across a
+repository's findings wins (same precedence as `aggregate`).
+
+¹ Allowed, but always listed in the gate result.
+² `critical` findings cannot be accepted as risk (rule R6).
+³ **Accepting a risk is a human override, not a technical pass.** The
+technical gate stays `FAIL` and lists the finding under `acceptedRisks`;
+Olivier's decision to merge anyway is recorded on the PR.
+
+### Freshness check
+
+`freshnessState(timestamp, maxAge)`: `PASS` if newer than `maxAge`, `STALE`
+if older, and `UNKNOWN` if the timestamp is missing, not a finite number, or
+**in the future** (beyond 5 minutes of clock skew) — evidence dated in the
+future cannot be trusted.
 
 ### Mapping from the Control Tower UI
 
@@ -86,12 +104,27 @@ and an ID is never reused.
 | `status` | ✔ | `open` · `fixed` · `verified` · `accepted_risk` |
 | `verification_method` | ✔ | How the current status was established (tests, re-review, rationale). Empty only while `open`. |
 | `timestamp` | ✔ | UTC time the current status was recorded (`YYYY-MM-DDTHH:MM:SSZ`) |
-| `reviewer` | ✔ | Who established the current status |
+| `reviewer` | ✔ | Who established the current status — one of the controlled identities below |
 | `found_at` |  | UTC time the finding was first raised |
 | `fix_commit_sha` |  | Full SHA of the fixing commit, or `null` |
 | `pr` |  | Pull request number |
 | `source_url` |  | Link to the review comment that raised it |
-| `verification_url` |  | Link to the review that verified it |
+| `verification_url` |  | Link to the review that verified it (`…/pull/N#pullrequestreview-…`, `#discussion_r…` or `#issuecomment-…`); **required for `verified`** |
+
+### Identities
+
+`reviewer` is restricted to four controlled identities, each with one role:
+
+| Identity | Role | May set status |
+|---|---|---|
+| `Claude` | Developer | `fixed` (with tests in `verification_method`); never `verified` |
+| `ChatGPT` | Code reviewer | `open` (raising), `verified` |
+| `Olivier` | Decision maker | `verified`, `accepted_risk` (only Olivier) |
+| `Gemini` | Planner / synthesizer | `open` (raising); never `verified` |
+
+All four post through the same GitHub account, so GitHub cannot tell them
+apart; the controlled label plus the required link to the verifying review is
+the enforceable record, and Olivier is the check on it.
 
 ### Status lifecycle
 
@@ -112,11 +145,11 @@ open ──fix pushed──▶ fixed ──independent re-review──▶ verifi
 
 | Rule | Check |
 |---|---|
-| R1 | Shape: required fields present, no unknown fields, types, enums and patterns as in the schema |
+| R1 | Shape: required fields present, no unknown fields, types, enums and patterns as in the schema; timestamps must be **real UTC instants** (`2026-02-30…`, `…T24:00:00Z` are rejected) |
 | R2 | `finding_id` unique |
 | R3 | `open` ⇒ no `fix_commit_sha` |
 | R4 | `fixed` / `verified` ⇒ `fix_commit_sha` and a non-empty `verification_method` |
-| R5 | `verified` ⇒ reviewer is not `Claude` (a developer cannot verify their own fix) |
+| R5 | `verified` ⇒ reviewer is an independent verifier (`ChatGPT` or `Olivier`, never the developer `Claude` or the planner `Gemini`) **and** `verification_url` links to the verifying review on the same PR |
 | R6 | `accepted_risk` ⇒ reviewer is `Olivier`, rationale given, severity not `critical` |
 | R7 | `found_at` ≤ `timestamp`; `timestamp` not in the future |
 | R8 | `fix_commit_sha` ≠ `commit_sha` |

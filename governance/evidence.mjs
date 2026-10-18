@@ -22,29 +22,54 @@ export function aggregate(states) {
 /** A release may proceed only on PASS. Everything else blocks or needs a human. */
 export const releaseAllowed = (state) => state === 'PASS';
 
+const BLOCKING_SEVERITIES = ['critical', 'high', 'medium'];
+
 /**
- * Evidence state of the review-findings check for one repository.
- * - Ledger missing/unreadable                       -> UNAVAILABLE
- * - Any open critical/high/medium finding           -> FAIL
- * - Any critical/high finding only 'fixed' (not yet
- *   independently verified)                         -> UNKNOWN
- * - Otherwise (open low/info allowed, listed)       -> PASS
+ * Review-findings check for one repository, with the findings behind it.
+ * - Ledger missing/unreadable                                  -> UNAVAILABLE
+ * - Any open, or accepted-risk, critical/high/medium finding   -> FAIL
+ *   (accepting a risk is Olivier's human override, recorded on the PR;
+ *    it is never a technical PASS)
+ * - Any critical/high/medium finding only 'fixed' (author-checked,
+ *   not independently verified)                                -> UNKNOWN
+ * - Otherwise                                                  -> PASS
+ * Low/info findings that are open, fixed-unverified or accepted do not
+ * block, but are always returned in the lists so nothing passes silently.
+ * @returns {{ state: string, blocking: string[], unverified: string[], acceptedRisks: string[], openLow: string[] }}
  */
-export function findingsState(ledger, repository) {
-  if (!ledger || !Array.isArray(ledger.findings)) return 'UNAVAILABLE';
+export function findingsGate(ledger, repository) {
+  const empty = { blocking: [], unverified: [], acceptedRisks: [], openLow: [] };
+  if (!ledger || !Array.isArray(ledger.findings)) return { state: 'UNAVAILABLE', ...empty };
   const mine = ledger.findings.filter((f) => f.repository === repository);
-  const blocking = ['critical', 'high', 'medium'];
-  if (mine.some((f) => f.status === 'open' && blocking.includes(f.severity))) return 'FAIL';
-  if (mine.some((f) => f.status === 'fixed' && ['critical', 'high'].includes(f.severity))) return 'UNKNOWN';
-  return 'PASS';
+  const isBlocking = (f) => BLOCKING_SEVERITIES.includes(f.severity);
+  const ids = (pred) => mine.filter(pred).map((f) => f.finding_id);
+
+  const gate = {
+    blocking: ids((f) => f.status === 'open' && isBlocking(f)),
+    unverified: ids((f) => f.status === 'fixed'),
+    acceptedRisks: ids((f) => f.status === 'accepted_risk'),
+    openLow: ids((f) => f.status === 'open' && !isBlocking(f)),
+  };
+  let state = 'PASS';
+  if (gate.blocking.length || mine.some((f) => f.status === 'accepted_risk' && isBlocking(f))) state = 'FAIL';
+  else if (mine.some((f) => f.status === 'fixed' && isBlocking(f))) state = 'UNKNOWN';
+  return { state, ...gate };
 }
+
+/** State only; see findingsGate() for the findings behind it. */
+export const findingsState = (ledger, repository) => findingsGate(ledger, repository).state;
+
+// Clock skew tolerated before a timestamp counts as "in the future".
+const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 /**
  * Freshness check: PASS if the evidence is newer than maxAgeMs, STALE if
- * older, UNKNOWN if it carries no usable timestamp.
+ * older. UNKNOWN if the timestamp is missing, not finite, or in the future
+ * (beyond small clock skew) — evidence from the future cannot be trusted.
  */
 export function freshnessState(timestampMs, maxAgeMs, now = Date.now()) {
-  if (typeof timestampMs !== 'number' || Number.isNaN(timestampMs)) return 'UNKNOWN';
+  if (typeof timestampMs !== 'number' || !Number.isFinite(timestampMs)) return 'UNKNOWN';
+  if (timestampMs > now + MAX_CLOCK_SKEW_MS) return 'UNKNOWN';
   return now - timestampMs <= maxAgeMs ? 'PASS' : 'STALE';
 }
 

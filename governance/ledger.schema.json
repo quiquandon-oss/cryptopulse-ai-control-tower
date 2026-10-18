@@ -44,12 +44,12 @@
         "status": { "enum": ["open", "fixed", "verified", "accepted_risk"] },
         "verification_method": { "type": "string", "description": "How the current status was established (tests run, review, rationale). Empty only while open." },
         "timestamp": { "$ref": "#/$defs/timestamp", "description": "UTC time the current status was recorded." },
-        "reviewer": { "type": "string", "minLength": 1, "description": "Who established the current status." },
+        "reviewer": { "enum": ["ChatGPT", "Claude", "Gemini", "Olivier"], "description": "Who established the current status. Controlled identities (docs/EVIDENCE_MODEL.md §2): Claude = developer, ChatGPT = reviewer, Gemini = planner, Olivier = decision maker. All four post through one GitHub account, so the label is the identity of record." },
         "found_at": { "$ref": "#/$defs/timestamp" },
         "fix_commit_sha": { "oneOf": [{ "$ref": "#/$defs/sha" }, { "type": "null" }] },
         "pr": { "type": "integer", "minimum": 1 },
         "source_url": { "type": "string", "pattern": "^https://github\\.com/quiquandon-oss/" },
-        "verification_url": { "type": "string", "pattern": "^https://github\\.com/quiquandon-oss/" }
+        "verification_url": { "type": "string", "pattern": "^https://github\\.com/quiquandon-oss/[^/]+/pull/\\d+#(pullrequestreview-\\d+|discussion_r\\d+|issuecomment-\\d+)$", "description": "Link to the review/comment that verified the fix. Required when status is verified." }
       }
     }
   }

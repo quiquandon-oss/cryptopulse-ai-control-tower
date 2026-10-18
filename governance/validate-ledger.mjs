@@ -19,8 +19,21 @@ const PROPS = FINDING.properties;
 const SHA = new RegExp(SCHEMA.$defs.sha.pattern);
 const TS = new RegExp(SCHEMA.$defs.timestamp.pattern);
 const URL_RE = new RegExp(PROPS.source_url.pattern);
+const REVIEW_URL_RE = /\/pull\/(\d+)#(?:pullrequestreview-\d+|discussion_r\d+|issuecomment-\d+)$/;
 const ID_RE = new RegExp(PROPS.finding_id.pattern);
 const CONTROL_TOWER = 'quiquandon-oss/cryptopulse-ai-control-tower';
+
+// Controlled identities (schema enum). Claude is the developer; Gemini plans.
+// Only the reviewer or the decision maker can independently verify a fix.
+const IDENTITIES = PROPS.reviewer.enum;
+const INDEPENDENT_VERIFIERS = ['ChatGPT', 'Olivier'];
+
+/** Well-formed AND a real instant that round-trips (rejects 2026-02-30, 24:00, …). */
+function isRealUtc(value) {
+  if (typeof value !== 'string' || !TS.test(value)) return false;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) && new Date(ms).toISOString().replace('.000Z', 'Z') === value;
+}
 
 // Credential-shaped strings must never be recorded in the ledger (R9).
 const SECRET_PATTERNS = [
@@ -60,11 +73,15 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
     if ('status' in f && !PROPS.status.enum.includes(f.status)) err(at, `status must be one of ${PROPS.status.enum.join(', ')}`);
     if (typeof f.commit_sha === 'string' && !SHA.test(f.commit_sha)) err(at, 'commit_sha must be a full 40-hex SHA');
     if (f.fix_commit_sha != null && (typeof f.fix_commit_sha !== 'string' || !SHA.test(f.fix_commit_sha))) err(at, 'fix_commit_sha must be a full 40-hex SHA or null');
-    for (const key of ['timestamp', 'found_at']) if (key in f && (typeof f[key] !== 'string' || !TS.test(f[key]))) err(at, `${key} must be UTC ISO 8601 (YYYY-MM-DDTHH:MM:SSZ)`);
+    for (const key of ['timestamp', 'found_at']) {
+      if (!(key in f)) continue;
+      if (typeof f[key] !== 'string' || !TS.test(f[key])) err(at, `${key} must be UTC ISO 8601 (YYYY-MM-DDTHH:MM:SSZ)`);
+      else if (!isRealUtc(f[key])) err(at, `${key} "${f[key]}" is not a real UTC date`);
+    }
     for (const key of ['source_url', 'verification_url']) if (key in f && (typeof f[key] !== 'string' || !URL_RE.test(f[key]))) err(at, `${key} must be a github.com/quiquandon-oss URL`);
     if ('pr' in f && !(Number.isInteger(f.pr) && f.pr >= 1)) err(at, 'pr must be a positive integer');
     if (typeof f.description === 'string' && f.description.length < 10) err(at, 'description too short');
-    if (typeof f.reviewer === 'string' && !f.reviewer.trim()) err(at, 'reviewer must not be empty');
+    if ('reviewer' in f && !IDENTITIES.includes(f.reviewer)) err(at, `reviewer must be one of ${IDENTITIES.join(', ')} (controlled identities)`);
 
     // R2 — IDs are unique and never reused.
     if (typeof f.finding_id === 'string') {
@@ -79,7 +96,12 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
       if (!f.fix_commit_sha) err(at, `${f.status} requires fix_commit_sha (R4)`);
       if (!method) err(at, `${f.status} requires verification_method (R4)`);
     }
-    if (f.status === 'verified' && f.reviewer === 'Claude') err(at, 'verified requires an independent reviewer; the developer cannot verify their own fix (R5)');
+    if (f.status === 'verified') {
+      if (!INDEPENDENT_VERIFIERS.includes(f.reviewer)) err(at, `verified requires an independent verifier (${INDEPENDENT_VERIFIERS.join(' or ')}); the developer cannot verify their own fix (R5)`);
+      const m = typeof f.verification_url === 'string' ? f.verification_url.match(REVIEW_URL_RE) : null;
+      if (!f.verification_url) err(at, 'verified requires verification_url linking to the verifying review (R5)');
+      else if (!m || (f.pr && Number(m[1]) !== f.pr)) err(at, `verification_url must link to a review on ${f.pr ? `pull/${f.pr}` : 'a pull request'} (R5)`);
+    }
     if (f.status === 'accepted_risk') {
       if (f.reviewer !== 'Olivier') err(at, 'accepted_risk must be accepted by Olivier, the decision maker (R6)');
       if (!method) err(at, 'accepted_risk requires the rationale in verification_method (R6)');
@@ -87,10 +109,10 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
     }
 
     // R7 — time order.
-    const t = Date.parse(f.timestamp);
-    const found = Date.parse(f.found_at);
-    if (!Number.isNaN(t) && t > now + 5 * 60 * 1000) err(at, 'timestamp is in the future (R7)');
-    if (!Number.isNaN(t) && !Number.isNaN(found) && found > t) err(at, 'found_at is after timestamp (R7)');
+    const t = isRealUtc(f.timestamp) ? Date.parse(f.timestamp) : null;
+    const found = isRealUtc(f.found_at) ? Date.parse(f.found_at) : null;
+    if (t != null && t > now + 5 * 60 * 1000) err(at, 'timestamp is in the future (R7)');
+    if (t != null && found != null && found > t) err(at, 'found_at is after timestamp (R7)');
 
     // R8 — a fix is a different commit from the one the finding was seen on.
     if (f.fix_commit_sha && f.fix_commit_sha === f.commit_sha) err(at, 'fix_commit_sha equals commit_sha (R8)');

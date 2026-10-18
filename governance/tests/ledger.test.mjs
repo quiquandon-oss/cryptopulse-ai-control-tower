@@ -74,7 +74,7 @@ test('R4 fixed/verified need a fix commit and a method', () => {
 
 test('R5 the developer cannot verify their own fix', () => {
   rejects({ ...base(), status: 'verified', reviewer: 'Claude' }, /R5/);
-  assert.deepEqual(check({ ...base(), status: 'verified', reviewer: 'ChatGPT' }), []);
+  assert.deepEqual(check({ ...base(), status: 'verified', reviewer: 'ChatGPT', pr: 3, verification_url: 'https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/3#pullrequestreview-1' }), []);
 });
 
 test('R6 accepted_risk is Olivier\'s decision, with rationale, never for critical', () => {
@@ -101,4 +101,28 @@ test('R9 credential-like strings are refused in any field', () => {
 test('--check-commits flags SHAs that are not in this repository', () => {
   const errors = validateLedger({ schema_version: 1, findings: [base()] }, { commitExists: inGit });
   assert.ok(errors.some((e) => /not found in local git history/.test(e)));
+});
+
+// --- ChatGPT review of PR #8 (findings 4–5) ---------------------------------
+
+test('#4 timestamps must be real calendar instants, not just well-formed', () => {
+  for (const bad of ['2026-99-99T99:99:99Z', '2026-02-30T10:00:00Z', '2026-10-18T24:00:00Z', '2026-10-18T12:60:00Z']) {
+    rejects({ ...base(), timestamp: bad, found_at: '2026-01-01T00:00:00Z' }, /not a real UTC date/);
+    rejects({ ...base(), found_at: bad }, /not a real UTC date/);
+  }
+  assert.deepEqual(check({ ...base(), timestamp: '2024-02-29T23:59:59Z', found_at: '2024-02-29T00:00:00Z' }), [], 'leap day is valid');
+});
+
+test('#5 reviewer must be a known identity; verified needs an independent reviewer and a review link', () => {
+  rejects({ ...base(), reviewer: 'quiquandon-oss' }, /reviewer must be one of/);
+  rejects({ ...base(), reviewer: 'claude' }, /reviewer must be one of/);
+  rejects({ ...base(), reviewer: 'Claude Code' }, /reviewer must be one of/);
+  const verified = { ...base(), status: 'verified', reviewer: 'ChatGPT', pr: 6, verification_url: 'https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/6#pullrequestreview-1' };
+  assert.deepEqual(check(verified), []);
+  rejects({ ...verified, reviewer: 'Claude' }, /R5/);
+  rejects({ ...verified, reviewer: 'Gemini' }, /R5/);
+  const { verification_url: _omit, ...noUrl } = verified;
+  rejects(noUrl, /verification_url/);
+  rejects({ ...verified, verification_url: 'https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/commit/abc' }, /review on/);
+  rejects({ ...verified, verification_url: 'https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/7#pullrequestreview-1' }, /pull\/6/);
 });
