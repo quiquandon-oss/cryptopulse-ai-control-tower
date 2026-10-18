@@ -1,0 +1,112 @@
+# Continuous integration for the Control Tower (TASK-CI-001).
+#
+# Runs every documented test suite on pull requests and on pushes to main, and
+# reports each job as a GitHub check run on the PR. Mandatory checks and how
+# to enforce them: docs/CI.md.
+#
+# Safety: read-only token, no secrets, no production calls (the browser smoke
+# test blocks all outbound requests), no deployments. Third-party actions are
+# pinned to full commit SHAs.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: the jobs only need to read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node-tests:
+    name: Node tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (full history for ledger commit checks)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Syntax check (node --check on every tracked .js/.mjs)
+        run: |
+          set -euo pipefail
+          git ls-files '*.js' '*.mjs' | xargs -r -n1 node --check
+          echo "checked $(git ls-files '*.js' '*.mjs' | wc -l) files"
+
+      - name: UI unit tests (boundaries, purge, model)
+        run: node --test ui/tests/*.test.mjs
+
+      # governance/ arrives with TASK-GOV-002 (PR #8). Once present on a ref,
+      # these two steps run and are mandatory; until then they report skipped.
+      - name: Ledger validation (schema, rules R1–R9, commit SHAs)
+        if: hashFiles('governance/ledger.json') != ''
+        run: node governance/validate-ledger.mjs --check-commits
+
+      - name: Governance tests (ledger, evidence model, allow-list)
+        if: hashFiles('governance/tests/*.test.mjs') != ''
+        run: node --test governance/tests/*.test.mjs
+
+      - name: Note when governance suite is not on this ref
+        if: hashFiles('governance/ledger.json') == ''
+        run: echo "::notice title=Governance suite absent::governance/ is not on this ref yet (TASK-GOV-002, PR #8); ledger validation and governance tests were skipped."
+
+  python-tests:
+    name: Python tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: serve.py path-restriction tests
+        run: python -m unittest ui/test_serve.py -v
+
+  browser-smoke:
+    name: Browser smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Set up Python 3.13 (for ui/serve.py)
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Install Playwright 1.56.1 and Chromium
+        run: |
+          npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+          npx --no-install playwright install --with-deps chromium
+
+      - name: Browser smoke test (offline; all outbound requests blocked)
+        run: node --test ui/tests/browser/*.test.mjs
