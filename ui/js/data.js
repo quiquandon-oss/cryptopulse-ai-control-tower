@@ -23,9 +23,10 @@ export function selectWorkflows(store) {
     .map((task) => {
       const pr = matchPull(task.id, pulls.data.pulls);
       const reviews = pr ? store.need(`reviews:${pr.number}`) : null;
-      const reviewList = reviews && reviews.status === 'ok' ? reviews.data.reviews
-        : reviews && reviews.status === 'error' ? [] : null;
-      return { task, pr, workflow: deriveWorkflow(task, pr, reviewList), reviewsError: reviews && reviews.status === 'error' ? reviews.error : null };
+      // Keep loading / loaded / failed distinct: a failed fetch is not "no reviews".
+      const reviewList = reviews && reviews.status === 'ok' ? reviews.data.reviews : null;
+      const reviewsError = reviews && reviews.status === 'error' ? reviews.error : null;
+      return { task, pr, workflow: deriveWorkflow(task, pr, reviewList, reviewsError) };
     })
     .sort((a, b) => b.task.id.localeCompare(a.task.id));
   return { status: 'ok', items, at: Math.min(tasks.data.at, pulls.data.at) };

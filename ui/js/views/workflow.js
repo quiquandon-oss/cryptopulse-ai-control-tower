@@ -5,7 +5,7 @@ import { h, pill } from '../dom.js';
 import { AGENTS, GATE_STEPS } from '../model.js';
 import { selectWorkflows, isOpen } from '../data.js';
 import { rail, statusTone } from '../components/rail.js';
-import { sourceNotice, asOf } from '../components/source.js';
+import { sourceNotice, asOf, errorText } from '../components/source.js';
 
 const GATE_PILL = {
   done: ['Done', 'green'],
@@ -14,6 +14,7 @@ const GATE_PILL = {
   untracked: ['Not tracked', 'neutral'],
   locked: ['Not started', 'neutral'],
   loading: ['Loading', 'neutral'],
+  error: ['Unavailable', 'red'],
 };
 
 export function workflowView(route, ctx) {
@@ -45,7 +46,7 @@ export function workflowView(route, ctx) {
       taskHeader(sel, item, ctx),
       paneSwitch,
       h('ol', { class: 'gates gates--readonly' },
-        GATE_STEPS.map((step, i) => gateRow(step, i, item.workflow.gates[i]))),
+        GATE_STEPS.map((step, i) => gateRow(step, i, item.workflow.gates[i], ctx))),
       asOf(sel.at)),
     rail(item, ctx));
 }
@@ -68,10 +69,11 @@ function taskHeader(sel, item, ctx) {
     h('p', { class: 'task-head__meta' },
       task.repository && h('span', {}, 'Repository: ', h('span', { class: 'mono' }, task.repository)),
       task.version && h('span', {}, `Version: ${task.version}`),
-      workflow.waitingOn && h('span', {}, `Waiting on: ${AGENTS[workflow.waitingOn].name}`)));
+      workflow.waitingOn && h('span', {}, `Waiting on: ${AGENTS[workflow.waitingOn].name}`),
+      !workflow.waitingOn && workflow.gates.some((g) => g.state === 'error') && h('span', {}, 'Waiting on: unknown (GitHub data unavailable)')));
 }
 
-function gateRow(step, i, gate) {
+function gateRow(step, i, gate, ctx) {
   const agent = AGENTS[step.agent];
   const [pillText, tone] = GATE_PILL[gate.state];
   return h('li', { class: `gate gate--${step.tone}${gate.state === 'pending' ? ' is-current' : ''}` },
@@ -85,6 +87,9 @@ function gateRow(step, i, gate) {
     h('div', { class: 'gate__status' },
       h('p', { class: 'gate__label' }, `Gate ${i + 1}/5 — ${step.label}`),
       h('p', { class: 'gate__detail' }, gate.detail),
+      gate.state === 'error' && h('p', { class: 'notice notice--error' },
+        h('span', {}, errorText(gate.error)),
+        h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onClick: ctx.refresh }, 'Retry')),
       gate.link && h('a', { class: 'linkbtn', href: gate.link, target: '_blank', rel: 'noopener noreferrer' }, 'Open on GitHub ↗')),
     h('div', { class: 'gate__state' }, pill(pillText, tone)));
 }

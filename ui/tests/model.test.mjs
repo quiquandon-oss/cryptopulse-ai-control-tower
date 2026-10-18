@@ -87,3 +87,37 @@ test('parseTask reads the real task files, ignoring citation markers', () => {
   assert.equal(cited.version, 'V2');
   assert.equal(parseTask('no heading', 'TASK-AB-012-notes.md').id, 'TASK-AB-012');
 });
+
+test('failed review fetch is reported as unavailable, never as "no review"', () => {
+  const err = new Error('HTTP 503');
+  const w = deriveWorkflow(task, pr(), null, err);
+  assert.equal(w.gates[2].state, 'error');
+  assert.equal(w.gates[2].error, err);
+  assert.ok(!/No review/i.test(w.gates[2].detail), w.gates[2].detail);
+  // Unknown review state => we cannot say who the task waits on.
+  assert.equal(w.waitingOn, null);
+});
+
+test('reviews still loading do not let a later gate claim the wait', () => {
+  assert.equal(deriveWorkflow(task, pr(), null).waitingOn, null);
+});
+
+test('selectWorkflows keeps review errors distinct from empty reviews', async () => {
+  const { selectWorkflows } = await import('../js/data.js');
+  const reviewErr = Object.assign(new Error('Unreachable'), { kind: 'network' });
+  const store = (reviewsEntry) => ({
+    need: (key) => ({
+      tasks: { status: 'ok', data: { tasks: [{ ...task }], at: 1 } },
+      pulls: { status: 'ok', data: { pulls: [pr()], at: 1 } },
+      'reviews:7': reviewsEntry,
+    })[key],
+  });
+  const failed = selectWorkflows(store({ status: 'error', error: reviewErr })).items[0].workflow;
+  assert.equal(failed.gates[2].state, 'error');
+  assert.equal(failed.waitingOn, null);
+  const empty = selectWorkflows(store({ status: 'ok', data: { reviews: [] } })).items[0].workflow;
+  assert.equal(empty.gates[2].state, 'pending');
+  assert.equal(empty.waitingOn, 'chatgpt');
+  const loading = selectWorkflows(store({ status: 'loading' })).items[0].workflow;
+  assert.equal(loading.gates[2].state, 'loading');
+});

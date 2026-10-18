@@ -39,12 +39,13 @@ export function matchPull(taskId, pulls) {
 /**
  * @param {object} task     parsed task file
  * @param {object|null} pr  matched pull request
- * @param {object[]|null} reviews  reviews of pr, or null if not loaded
+ * @param {object[]|null} reviews  reviews of pr, or null if not loaded (yet)
+ * @param {Error|null} reviewsError  set when loading the reviews failed
  * @returns {{ gates: object[], status: string, waitingOn: string|null }}
  */
-export function deriveWorkflow(task, pr, reviews) {
+export function deriveWorkflow(task, pr, reviews, reviewsError = null) {
   const gate = (state, detail, extra = {}) => ({ state, detail, ...extra });
-  // state: done | pending | rejected | untracked | locked | loading
+  // state: done | pending | rejected | untracked | locked | loading | error
   const g1 = gate('done', `Task file ${task.file}`, { link: task.htmlUrl });
 
   const g2 = pr
@@ -53,6 +54,8 @@ export function deriveWorkflow(task, pr, reviews) {
 
   let g3;
   if (!pr) g3 = gate('locked', 'Waits for a pull request');
+  // A failed fetch is not "no reviews": say it is unknown and keep the error.
+  else if (reviewsError) g3 = gate('error', `Could not load reviews for PR #${pr.number}`, { error: reviewsError, link: pr.html_url });
   else if (reviews == null) g3 = gate('loading', 'Loading reviews…');
   else if (reviews.length) {
     const last = reviews[reviews.length - 1];
@@ -72,8 +75,19 @@ export function deriveWorkflow(task, pr, reviews) {
   const status = pr && pr.merged_at ? 'Completed'
     : pr && pr.state === 'closed' ? 'Closed'
       : pr ? 'In Review' : 'Planned';
-  const firstPending = gates.findIndex((g) => g.state === 'pending');
-  return { gates, status, waitingOn: firstPending >= 0 ? GATE_STEPS[firstPending].agent : null };
+  return { gates, status, waitingOn: waitingOn(gates) };
+}
+
+/**
+ * Agent of the first pending gate. If an earlier gate is still loading or
+ * failed, its outcome is unknown, so nobody can be named (null).
+ */
+function waitingOn(gates) {
+  for (let i = 0; i < gates.length; i += 1) {
+    if (gates[i].state === 'loading' || gates[i].state === 'error') return null;
+    if (gates[i].state === 'pending') return GATE_STEPS[i].agent;
+  }
+  return null;
 }
 
 /** Which agents are waiting, derived from open tasks' workflows. */
