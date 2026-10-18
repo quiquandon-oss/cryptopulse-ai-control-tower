@@ -230,12 +230,12 @@
       "commit_sha": "1e4936914ea9c6f1a85a097fbb5e6b5b36c74e73",
       "description": "Ledger validator rule R7 rejected a timestamp only if it was more than 5 minutes in the future (t > now + 5 min), contradicting docs/EVIDENCE_MODEL.md ('timestamp not in the future'); found_at had no future check at all.",
       "severity": "medium",
-      "status": "open",
-      "verification_method": "",
-      "timestamp": "2026-10-18T17:22:35Z",
-      "reviewer": "ChatGPT",
+      "status": "fixed",
+      "verification_method": "Fix 63db4c8: R7 rejects any timestamp or found_at later than the validator clock, no tolerance. Tests: +1 s/+1 min/+4 min/+1 h for both fields, timestamp exactly 1 ms ahead of the clock, and timestamp === now accepted; the new test fails against the validator on main eb51bb6 (timestamp +1 s produced no error). Severity set to medium (same class as CT-0010) so it blocks until independently verified. Author-checked only; awaiting ChatGPT independent re-review.",
+      "timestamp": "2026-10-18T17:32:51Z",
+      "reviewer": "Claude",
       "found_at": "2026-10-18T17:22:35Z",
-      "fix_commit_sha": null,
+      "fix_commit_sha": "63db4c854cd91dee8f77104d68282a9a8a4e0fba",
       "pr": 8,
       "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/8#pullrequestreview-5564041614"
     }
