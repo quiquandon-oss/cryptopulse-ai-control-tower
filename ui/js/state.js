@@ -151,11 +151,27 @@ function seed() {
   return structuredClone(SEED);
 }
 
+// Saved state must have the shape the views read; anything else (stale
+// schema, hand-edited storage) falls back to the seed instead of crashing.
+function isValidState(s) {
+  return Array.isArray(s?.tasks) && s.tasks.every((t) =>
+    typeof t?.id === 'string'
+    && typeof t.title === 'string'
+    && Array.isArray(t.labels)
+    && Array.isArray(t.ci)
+    && t.deployment && typeof t.deployment === 'object'
+    && Array.isArray(t.gates) && t.gates.length === GATE_STEPS.length
+    && t.gates.every((g) => typeof g?.instruction === 'string'
+      && ['pending', 'draft', 'rejected', 'completed'].includes(g.status)
+      && (g.output == null || Array.isArray(g.output.bullets))));
+}
+
 // localStorage can throw (private mode, blocked storage); the UI must work without it.
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const parsed = raw ? JSON.parse(raw) : null;
+    return isValidState(parsed) ? parsed : null;
   } catch {
     return null;
   }

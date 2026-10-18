@@ -55,7 +55,16 @@ const ctx = { store, toast, navigate };
 function render() {
   const route = parseRoute();
   const state = store.get();
-  const closeMenu = () => { menuOpen = false; };
+  // A link to a new route closes the menu via the hashchange handler. A tap on
+  // the current route fires no hashchange, so close and re-render here. (Not
+  // for other routes: re-rendering removes the clicked link and would cancel
+  // its navigation.)
+  const closeMenu = (e) => {
+    if (menuOpen && e.currentTarget.getAttribute('href') === location.hash) {
+      menuOpen = false;
+      render();
+    }
+  };
   root.replaceChildren(
     header(route, { onToggleMenu: () => { menuOpen = !menuOpen; render(); } }),
     h('div', { class: 'shell' },
