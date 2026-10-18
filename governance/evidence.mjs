@@ -59,17 +59,15 @@ export function findingsGate(ledger, repository) {
 /** State only; see findingsGate() for the findings behind it. */
 export const findingsState = (ledger, repository) => findingsGate(ledger, repository).state;
 
-// Clock skew tolerated before a timestamp counts as "in the future".
-const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
-
 /**
  * Freshness check: PASS if the evidence is newer than maxAgeMs, STALE if
- * older. UNKNOWN if the timestamp is missing, not finite, or in the future
- * (beyond small clock skew) — evidence from the future cannot be trusted.
+ * older. UNKNOWN if the timestamp is missing, not finite, or later than
+ * `now` by any amount — evidence dated in the future cannot be trusted, so
+ * there is deliberately no clock-skew tolerance (ChatGPT review, CT-0010).
  */
 export function freshnessState(timestampMs, maxAgeMs, now = Date.now()) {
   if (typeof timestampMs !== 'number' || !Number.isFinite(timestampMs)) return 'UNKNOWN';
-  if (timestampMs > now + MAX_CLOCK_SKEW_MS) return 'UNKNOWN';
+  if (timestampMs > now) return 'UNKNOWN';
   return now - timestampMs <= maxAgeMs ? 'PASS' : 'STALE';
 }
 

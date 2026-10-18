@@ -93,10 +93,12 @@ test('#2 every severity x status combination has a defined, non-silent result', 
   }
 });
 
-test('#3 future or invalid freshness timestamps are UNKNOWN, never PASS', () => {
+test('#3 (CT-0010) any future or invalid freshness timestamp is UNKNOWN, never PASS', () => {
   const now = Date.parse('2026-10-18T12:00:00Z');
   assert.equal(freshnessState(now + 3_600_000, 3_600_000, now), 'UNKNOWN');
-  assert.equal(freshnessState(now + 60_000, 3_600_000, now), 'PASS', 'small clock skew tolerated');
+  assert.equal(freshnessState(now + 60_000, 3_600_000, now), 'UNKNOWN', 'no clock-skew tolerance (CT-0010)');
+  assert.equal(freshnessState(now + 1, 3_600_000, now), 'UNKNOWN', 'even 1 ms ahead');
+  assert.equal(freshnessState(now, 3_600_000, now), 'PASS', 'exactly now is not future');
   assert.equal(freshnessState(Infinity, 3_600_000, now), 'UNKNOWN');
   assert.equal(freshnessState(NaN, 3_600_000, now), 'UNKNOWN');
   assert.equal(freshnessState('2026-10-18', 3_600_000, now), 'UNKNOWN');

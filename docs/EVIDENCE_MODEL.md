@@ -68,8 +68,8 @@ Olivier's decision to merge anyway is recorded on the PR.
 
 `freshnessState(timestamp, maxAge)`: `PASS` if newer than `maxAge`, `STALE`
 if older, and `UNKNOWN` if the timestamp is missing, not a finite number, or
-**in the future** (beyond 5 minutes of clock skew) — evidence dated in the
-future cannot be trusted.
+**later than now by any amount** — evidence dated in the future cannot be
+trusted, so there is deliberately no clock-skew tolerance.
 
 ### Mapping from the Control Tower UI
 
