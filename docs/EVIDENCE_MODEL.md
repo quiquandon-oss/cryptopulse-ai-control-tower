@@ -114,7 +114,8 @@ and an ID is never reused.
 | `reviewer` | ✔ | Who established the current status — one of the controlled identities below |
 | `found_at` |  | UTC time the finding was first raised |
 | `fix_commit_sha` |  | Full SHA of the fixing commit, or `null` |
-| `pr` |  | Pull request number |
+| `pr` |  | Pull request number where the finding was raised |
+| `related_prs` |  | Other PRs where it was fixed or verified (unique, must not repeat `pr`) |
 | `source_url` |  | Link to the review comment that raised it |
 | `verification_url` |  | Link to the review that verified it (`…/pull/N#pullrequestreview-…`, `#discussion_r…` or `#issuecomment-…`); **required for `verified`** |
 
@@ -156,9 +157,9 @@ open ──fix pushed──▶ fixed ──independent re-review──▶ verifi
 | R2 | `finding_id` unique |
 | R3 | `open` ⇒ no `fix_commit_sha` |
 | R4 | `fixed` / `verified` ⇒ `fix_commit_sha` and a non-empty `verification_method` |
-| R5 | `verified` ⇒ reviewer is an independent verifier (`ChatGPT` or `Olivier`, never the developer `Claude` or the planner `Gemini`) **and** `verification_url` links to the verifying review on the same PR |
+| R5 | `verified` ⇒ reviewer is an independent verifier (`ChatGPT` or `Olivier`, never the developer `Claude` or the planner `Gemini`) **and** `verification_url` links to the verifying review on the finding's `pr` or one of its `related_prs` (a review on any other PR is rejected) |
 | R6 | `accepted_risk` ⇒ reviewer is `Olivier`, rationale given, severity not `critical` |
-| R7 | `found_at` ≤ `timestamp`; `timestamp` not in the future |
+| R7 | `found_at` ≤ `timestamp`; neither `timestamp` nor `found_at` may be later than the validator's clock — **no tolerance** (CT-0014) |
 | R8 | `fix_commit_sha` ≠ `commit_sha` |
 | R9 | No credential-like strings (tokens, keys, private keys) in any field |
 | `--check-commits` | Control-tower SHAs exist in local git history |

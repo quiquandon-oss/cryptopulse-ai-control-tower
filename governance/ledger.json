@@ -109,14 +109,19 @@
       "commit_sha": "9aff17f5d8c25d34e16399b6012d4b86499280b7",
       "description": "No CI workflow runs the test suites on pull requests, so the reviewer cannot independently reproduce the Node, server, browser or phone results reported in PR descriptions (raised in every ChatGPT review of PRs #3, #6 and #7).",
       "severity": "medium",
-      "status": "fixed",
-      "verification_method": "TASK-CI-001 (PR #9, merged as 6cc0b0d): .github/workflows/ci.yml runs on pull_request and push to main, contents: read, SHA-pinned actions, jobs Node tests / Python tests / Browser smoke reported as check runs. Evidence: run 39148370779 on PR #9 head 4ffe685 - all 3 checks success (UI unit 20/20, serve.py 6 OK, browser smoke 2/2; governance steps skipped there because governance/ was not on that ref). Run 39148831245 on PR #8 head c122c84 - all 3 success, with ledger validation \"12 findings valid\" and governance tests 34/34 executed in CI. Run 39148298631 (head 9d0a922) failed on a workflow YAML bug, showing failures fail the job. Checks are not yet required by branch protection (tracked as CT-0013). Author-checked only; awaiting ChatGPT independent re-review.",
-      "timestamp": "2026-10-18T17:17:59Z",
-      "reviewer": "Claude",
+      "status": "verified",
+      "verification_method": "TASK-CI-001 (PR #9, merged as 6cc0b0d): .github/workflows/ci.yml runs on pull_request and push to main, contents: read, SHA-pinned actions, jobs Node tests / Python tests / Browser smoke reported as check runs. Evidence: run 39148370779 on PR #9 head 4ffe685 - all 3 checks success (UI unit 20/20, serve.py 6 OK, browser smoke 2/2; governance steps skipped there because governance/ was not on that ref). Run 39148831245 on PR #8 head c122c84 - all 3 success, with ledger validation \"12 findings valid\" and governance tests 34/34 executed in CI. Run 39148298631 (head 9d0a922) failed on a workflow YAML bug, showing failures fail the job. Checks are not yet required by branch protection (tracked as CT-0013). ChatGPT independent re-review (pullrequestreview-5564041614): VERIFIED on post-merge run 39149017727 (Node, Python, Browser smoke all success; ledger validation, governance 34/34 and UI 20/20 executed). Verification covers CI presence and passing suites, not merge enforcement (CT-0013).",
+      "timestamp": "2026-10-18T17:22:35Z",
+      "reviewer": "ChatGPT",
       "found_at": "2026-10-18T13:01:06Z",
       "fix_commit_sha": "4ffe6859d975d597bcf38f29281451a146ef2301",
       "pr": 3,
-      "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/3#pullrequestreview-5563088915"
+      "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/3#pullrequestreview-5563088915",
+      "verification_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/8#pullrequestreview-5564041614",
+      "related_prs": [
+        8,
+        9
+      ]
     },
     {
       "finding_id": "CT-0008",
@@ -159,14 +164,15 @@
       "commit_sha": "8ae42166a0e674574362def24de33b5bd756fd22",
       "description": "freshnessState() returned PASS for timestamps in the future because now - ts is negative and therefore within maxAge.",
       "severity": "medium",
-      "status": "fixed",
-      "verification_method": "History: fix 172911f returned UNKNOWN only beyond a 5-minute clock-skew allowance; ChatGPT re-review of 3159284 (pullrequestreview-5563971181) held it as PARTIALLY FIXED. Fix 3f8c834: freshnessState() returns UNKNOWN for missing, non-numeric, non-finite or any timestamp > now (no tolerance); PASS/STALE unchanged for valid past timestamps. Tests d509a01: CT-0010 acceptance matrix (+1 ms, +1 min, +1 h -> UNKNOWN; == now -> PASS; age == maxAge -> PASS, +1 ms -> STALE; undefined, null, string, numeric string, NaN, +/-Infinity, object -> UNKNOWN); fails against 172911f at +1 ms. Author-checked only; awaiting ChatGPT independent re-review.",
-      "timestamp": "2026-10-18T17:06:37Z",
-      "reviewer": "Claude",
+      "status": "verified",
+      "verification_method": "History: fix 172911f returned UNKNOWN only beyond a 5-minute clock-skew allowance; ChatGPT re-review of 3159284 (pullrequestreview-5563971181) held it as PARTIALLY FIXED. Fix 3f8c834: freshnessState() returns UNKNOWN for missing, non-numeric, non-finite or any timestamp > now (no tolerance); PASS/STALE unchanged for valid past timestamps. Tests d509a01: CT-0010 acceptance matrix (+1 ms, +1 min, +1 h -> UNKNOWN; == now -> PASS; age == maxAge -> PASS, +1 ms -> STALE; undefined, null, string, numeric string, NaN, +/-Infinity, object -> UNKNOWN); fails against 172911f at +1 ms. ChatGPT independent re-review (pullrequestreview-5564041614): VERIFIED at 3f8c834 with acceptance test d509a01; passing in main CI.",
+      "timestamp": "2026-10-18T17:22:35Z",
+      "reviewer": "ChatGPT",
       "found_at": "2026-10-18T15:06:36Z",
       "fix_commit_sha": "3f8c8347d16d5fc4161d8531d93c0a5aa451568c",
       "pr": 8,
-      "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/8#pullrequestreview-5563591983"
+      "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/8#pullrequestreview-5563591983",
+      "verification_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/8#pullrequestreview-5564041614"
     },
     {
       "finding_id": "CT-0011",
@@ -216,6 +222,22 @@
       "found_at": "2026-10-18T17:17:59Z",
       "fix_commit_sha": null,
       "pr": 9
+    },
+    {
+      "finding_id": "CT-0014",
+      "repository": "quiquandon-oss/cryptopulse-ai-control-tower",
+      "file_path": "governance/validate-ledger.mjs",
+      "commit_sha": "1e4936914ea9c6f1a85a097fbb5e6b5b36c74e73",
+      "description": "Ledger validator rule R7 rejected a timestamp only if it was more than 5 minutes in the future (t > now + 5 min), contradicting docs/EVIDENCE_MODEL.md ('timestamp not in the future'); found_at had no future check at all.",
+      "severity": "medium",
+      "status": "open",
+      "verification_method": "",
+      "timestamp": "2026-10-18T17:22:35Z",
+      "reviewer": "ChatGPT",
+      "found_at": "2026-10-18T17:22:35Z",
+      "fix_commit_sha": null,
+      "pr": 8,
+      "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/8#pullrequestreview-5564041614"
     }
   ]
 }

@@ -43,13 +43,13 @@ test('findingsState rules', () => {
   assert.equal(findingsState({ findings: [f('critical', 'open')] }, 'quiquandon-oss/CryptoPulseV4'), 'PASS', 'scoped to repository');
 });
 
-test('current ledger: control tower findings gate is FAIL (CT-0013 open: CI checks not enforced)', () => {
+test('current ledger: control tower findings gate is FAIL (CT-0013, CT-0014 open)', () => {
   const ledger = JSON.parse(readFileSync(join(GOV, 'ledger.json'), 'utf8'));
   const gate = findingsGate(ledger, CT);
   assert.equal(gate.state, 'FAIL');
-  assert.deepEqual(gate.blocking, ['CT-0013']);
+  assert.deepEqual(gate.blocking, ['CT-0013', 'CT-0014']);
   // Fixed but not independently verified: listed, never silently passed.
-  assert.deepEqual(gate.unverified, ['CT-0004', 'CT-0007', 'CT-0010']);
+  assert.deepEqual(gate.unverified, ['CT-0004']);
 });
 
 test('freshnessState', () => {

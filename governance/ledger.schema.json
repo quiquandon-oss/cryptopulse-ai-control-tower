@@ -48,6 +48,7 @@
         "found_at": { "$ref": "#/$defs/timestamp" },
         "fix_commit_sha": { "oneOf": [{ "$ref": "#/$defs/sha" }, { "type": "null" }] },
         "pr": { "type": "integer", "minimum": 1 },
+        "related_prs": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1 }, "description": "Other PRs where the finding was fixed or verified (R5 accepts a verification_url on pr or any of these)." },
         "source_url": { "type": "string", "pattern": "^https://github\\.com/quiquandon-oss/" },
         "verification_url": { "type": "string", "pattern": "^https://github\\.com/quiquandon-oss/[^/]+/pull/\\d+#(pullrequestreview-\\d+|discussion_r\\d+|issuecomment-\\d+)$", "description": "Link to the review/comment that verified the fix. Required when status is verified." }
       }
