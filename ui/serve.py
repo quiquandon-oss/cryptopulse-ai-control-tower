@@ -17,33 +17,34 @@ import functools
 import http.server
 import mimetypes
 import socket
+import urllib.parse
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ALLOWED_PREFIXES = ("/ui/", "/docs/", "/tasks/")
+ALLOWED_DIRS = tuple((REPO_ROOT / d).resolve() for d in ("ui", "docs", "tasks"))
 
 # Python's table lacks the web app manifest type Chrome expects.
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
 class TestbedHandler(http.server.SimpleHTTPRequestHandler):
-    """Static handler restricted to ALLOWED_PREFIXES, no directory listings."""
+    """Static handler restricted to ALLOWED_DIRS, no directory listings."""
 
     def _path_only(self):
         return self.path.split("?", 1)[0].split("#", 1)[0]
 
     def _is_allowed(self):
         path = self._path_only()
-        # Reject traversal and hidden files/folders anywhere in the path.
-        parts = [p for p in path.split("/") if p]
-        if any(p in ("..", ".") or p.startswith(".") for p in parts):
+        # Check the *decoded* path: translate_path() percent-decodes, so a raw
+        # check would miss %2e%2e (..) and %2egit (.git). Any component that
+        # starts with "." -- traversal or hidden file -- is refused.
+        decoded = urllib.parse.unquote(path)
+        if any(part.startswith(".") for part in decoded.split("/") if part):
             return False
-        # Percent-encoded traversal is resolved by translate_path; confirm the
-        # final file still sits inside the repo.
+        # The file actually served must sit inside an allowed folder
+        # (resolve() also follows symlinks), not merely inside the repo.
         target = Path(self.translate_path(path)).resolve()
-        if REPO_ROOT not in target.parents and target != REPO_ROOT:
-            return False
-        return path.startswith(ALLOWED_PREFIXES)
+        return any(target == d or d in target.parents for d in ALLOWED_DIRS)
 
     def send_head(self):
         path = self._path_only()

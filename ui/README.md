@@ -35,6 +35,12 @@ python3 ui/serve.py --port 9000
 traversal and directory listings return 404, so `--lan` never exposes the
 repository. Stop with **Ctrl+C**.
 
+Regression tests for those restrictions (incl. percent-encoded traversal):
+
+```bash
+python3 -m unittest ui/test_serve.py -v
+```
+
 Phone preview over `--lan` uses plain HTTP, so it runs but cannot be
 *installed* (browsers require HTTPS for that). Use the GitHub Pages link to
 install.
