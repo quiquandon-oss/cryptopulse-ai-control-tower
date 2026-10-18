@@ -3,7 +3,8 @@
 # Site layout mirrors the repo so the UI's relative links (../docs, ../tasks)
 # keep working:  <site>/ui/  <site>/docs/  <site>/tasks/
 # Only static UI files and Markdown docs are published -- no scripts or
-# repository internals. The UI itself runs on local mock data only.
+# repository internals. The UI reads public, read-only data sources only
+# (allow-list in ui/js/config.js).
 #
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
 name: Deploy UI to GitHub Pages
@@ -43,6 +44,8 @@ jobs:
           cp -r ui docs tasks _site/
           # Local-only helper scripts are not part of the site.
           find _site -name '*.py' -delete
+          # Tests are not part of the site.
+          rm -rf _site/ui/tests
           # Site root opens the app.
           printf '%s\n' \
             '<!doctype html>' \

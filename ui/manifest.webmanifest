@@ -1,7 +1,7 @@
 {
   "name": "AI Control Tower",
   "short_name": "Control Tower",
-  "description": "CryptoPulse multi-agent Control Tower — UI testbed (mock data only).",
+  "description": "CryptoPulse multi-agent Control Tower — live, read-only status for V1–V4 and the agent workflow.",
   "id": "./",
   "start_url": "./#/workflow",
   "scope": "./",

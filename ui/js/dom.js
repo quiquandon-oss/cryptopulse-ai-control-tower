@@ -51,10 +51,3 @@ export function keyValues(rows) {
   return h('dl', { class: 'kv' },
     rows.map(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]));
 }
-
-/** Current local time as "YYYY-MM-DD HH:MM", the format used in mock data. */
-export function nowStamp() {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}

@@ -1,24 +1,23 @@
 // Entry point: hash router, layout shell, toast, and render loop.
 //
 // Routes (hash-based so the app works from any static file server):
-//   #/workflow[/<taskId>]  #/dashboard  #/tasks/active  #/tasks/history  #/new
-//   #/repositories  #/prs  #/agents  #/knowledge  #/templates  #/instructions  #/settings
+//   #/workflow[/<taskId>]  #/dashboard  #/tasks/active  #/tasks/history
+//   #/projects  #/prs  #/agents  #/knowledge  #/templates  #/instructions  #/settings
 import { h } from './dom.js';
 import { createStore } from './state.js';
 import { header } from './components/header.js';
 import { sidebar } from './components/sidebar.js';
 import { bottomNav } from './components/bottomnav.js';
 import { workflowView } from './views/workflow.js';
-import { tasksView, newTaskView } from './views/tasks.js';
-import { dashboardView, agentsView, repositoriesView, prsView } from './views/overview.js';
+import { tasksView } from './views/tasks.js';
+import { dashboardView, agentsView, projectsView, prsView } from './views/overview.js';
 import { knowledgeView, templatesView, instructionsView, settingsView } from './views/docs.js';
 
 const VIEWS = {
   workflow: workflowView,
   dashboard: dashboardView,
   tasks: tasksView,
-  new: newTaskView,
-  repositories: repositoriesView,
+  projects: projectsView,
   prs: prsView,
   agents: agentsView,
   knowledge: knowledgeView,
@@ -26,6 +25,8 @@ const VIEWS = {
   instructions: instructionsView,
   settings: settingsView,
 };
+// Old bookmarks from the earlier layout.
+const ALIASES = { repositories: 'projects' };
 
 const root = document.getElementById('app');
 const toastEl = document.getElementById('toast');
@@ -34,9 +35,11 @@ let menuOpen = false;
 let toastTimer;
 
 function parseRoute() {
-  const [view = 'workflow', param = null] = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const [rawView = 'workflow', param = null] = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const view = ALIASES[rawView] || rawView;
   if (!VIEWS[view]) return { view: 'workflow', param: null };
-  return { view, param: view === 'tasks' ? (param === 'history' ? 'history' : 'active') : param };
+  if (view === 'tasks') return { view, param: param === 'history' ? 'history' : 'active' };
+  return { view, param: param ? decodeURIComponent(param) : null };
 }
 
 function toast(message) {
@@ -55,11 +58,10 @@ function navigate(hash) {
 const ui = { workflowPane: 'gates' };
 const setWorkflowPane = (pane) => { ui.workflowPane = pane; render(); };
 
-const ctx = { store, toast, navigate, ui, setWorkflowPane };
+const ctx = { store, toast, navigate, ui, setWorkflowPane, refresh: () => store.refresh() };
 
 function render() {
   const route = parseRoute();
-  const state = store.get();
   // A link to a new route closes the menu via the hashchange handler. A tap on
   // the current route fires no hashchange, so close and re-render here. (Not
   // for other routes: re-rendering removes the clicked link and would cancel
@@ -71,17 +73,17 @@ function render() {
     }
   };
   root.replaceChildren(
-    header(route, { onToggleMenu: () => { menuOpen = !menuOpen; render(); } }),
+    header(route, { onToggleMenu: () => { menuOpen = !menuOpen; render(); }, onRefresh: () => { ctx.refresh(); toast('Refreshing live data…'); } }),
     h('div', { class: 'shell' },
-      sidebar(state, route, { open: menuOpen, onNavigate: closeMenu }),
+      sidebar(route, { open: menuOpen, onNavigate: closeMenu }),
       // Backdrop closes the off-canvas menu on small screens.
       menuOpen && h('button', { class: 'backdrop', type: 'button', 'aria-label': 'Close navigation', onClick: () => { menuOpen = false; render(); } }),
-      h('main', { class: 'content', id: 'main' }, VIEWS[route.view](state, route, ctx))),
-    bottomNav(state, route));
+      h('main', { class: 'content', id: 'main' }, VIEWS[route.view](route, ctx))),
+    bottomNav(route));
 }
 
-// Service worker enables install + offline use. Browsers only allow it on
-// HTTPS or localhost; elsewhere the app still runs, just not installable.
+// Service worker enables install + offline use of the app shell. Browsers only
+// allow it on HTTPS or localhost; elsewhere the app still runs.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch((err) => console.warn('Service worker not registered:', err));
 }

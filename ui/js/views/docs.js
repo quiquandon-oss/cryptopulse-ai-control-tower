@@ -2,6 +2,8 @@
 // Links point at the Markdown files in this repository (serve the repo root
 // so ../docs and ../tasks resolve; see ui/README.md).
 import { h, card } from '../dom.js';
+import { GITHUB, VERSIONS, CACHE_TTL_MS } from '../config.js';
+import { githubRate, clearCache } from '../lib/http.js';
 
 const doc = (path, title, note) => h('li', { class: 'doclink' },
   h('a', { href: `../${path}`, target: '_blank', rel: 'noopener' }, title),
@@ -36,14 +38,26 @@ export function instructionsView() {
       doc('docs/AI_CONTROL_TOWER_MASTER.md', 'Gemini — Master Orchestrator (planner/synthesizer)'))));
 }
 
-export function settingsView(state, route, ctx) {
+export function settingsView(route, ctx) {
+  const rate = githubRate.remaining == null ? 'not measured yet'
+    : `${githubRate.remaining}/${githubRate.limit} left, resets ${new Date(githubRate.resetAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   return h('div', { class: 'page' },
     h('h1', { class: 'page__title' }, 'Settings'),
-    card('Test UI data', [
-      h('p', { class: 'muted' }, 'All data is local mock state kept in this browser. No credentials are stored and no network calls are made.'),
-      h('button', {
-        class: 'btn btn--danger', type: 'button',
-        onClick: () => { ctx.store.reset(); ctx.toast('Mock data reset.'); },
-      }, 'Reset mock data'),
+    card('Data sources (read-only)', [
+      h('p', { class: 'muted' }, 'Public endpoints only, defined in ui/js/config.js. No credentials are stored or sent; any URL not on this list is refused.'),
+      h('div', { class: 'table-wrap' }, h('table', { class: 'table' },
+        h('thead', {}, h('tr', {}, ['Version', 'Host', 'Allowed paths'].map((c) => h('th', {}, c)))),
+        h('tbody', {}, VERSIONS.map((v) => h('tr', {},
+          h('td', {}, v.via ? `${v.id} (via ${v.via})` : v.id),
+          h('td', { class: 'mono' }, new URL(v.backend.base).host),
+          h('td', { class: 'mono' }, Object.values(v.backend.paths).join('  ')))))),
+      ),
+      h('p', { class: 'muted' }, `GitHub: public API for ${GITHUB.owner} repositories (unauthenticated). Rate limit: ${rate}.`),
+    ]),
+    card('Cache', [
+      h('p', { class: 'muted' }, `Responses are cached in this browser for ${CACHE_TTL_MS / 60000} minutes to stay within GitHub’s 60 requests/hour limit.`),
+      h('div', { class: 'btnrow' },
+        h('button', { class: 'btn btn--primary', type: 'button', onClick: () => { ctx.refresh(); ctx.toast('Refreshing (cached responses still used).'); } }, 'Refresh'),
+        h('button', { class: 'btn btn--ghost', type: 'button', onClick: () => { clearCache(); ctx.refresh(); ctx.toast('Cache cleared; reloading live data.'); } }, 'Clear cache & reload')),
     ]));
 }
