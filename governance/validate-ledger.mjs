@@ -73,6 +73,7 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
     if ('status' in f && !PROPS.status.enum.includes(f.status)) err(at, `status must be one of ${PROPS.status.enum.join(', ')}`);
     if (typeof f.commit_sha === 'string' && !SHA.test(f.commit_sha)) err(at, 'commit_sha must be a full 40-hex SHA');
     if (f.fix_commit_sha != null && (typeof f.fix_commit_sha !== 'string' || !SHA.test(f.fix_commit_sha))) err(at, 'fix_commit_sha must be a full 40-hex SHA or null');
+    if ('fix_reference' in f && (typeof f.fix_reference !== 'string' || !f.fix_reference.trim()) && f.fix_reference !== '') err(at, 'fix_reference must be a non-empty string');
     for (const key of ['timestamp', 'found_at']) {
       if (!(key in f)) continue;
       if (typeof f[key] !== 'string' || !TS.test(f[key])) err(at, `${key} must be UTC ISO 8601 (YYYY-MM-DDTHH:MM:SSZ)`);
@@ -80,6 +81,12 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
     }
     for (const key of ['source_url', 'verification_url']) if (key in f && (typeof f[key] !== 'string' || !URL_RE.test(f[key]))) err(at, `${key} must be a github.com/quiquandon-oss URL`);
     if ('pr' in f && !(Number.isInteger(f.pr) && f.pr >= 1)) err(at, 'pr must be a positive integer');
+    if ('related_prs' in f) {
+      const list = f.related_prs;
+      if (!Array.isArray(list) || !list.every((n) => Number.isInteger(n) && n >= 1) || new Set(list).size !== list.length) {
+        err(at, 'related_prs must be an array of unique positive integers');
+      } else if (list.includes(f.pr)) err(at, 'related_prs must not repeat pr');
+    }
     if (typeof f.description === 'string' && f.description.length < 10) err(at, 'description too short');
     if ('reviewer' in f && !IDENTITIES.includes(f.reviewer)) err(at, `reviewer must be one of ${IDENTITIES.join(', ')} (controlled identities)`);
 
@@ -91,16 +98,24 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
 
     // R3–R6 — status-dependent evidence.
     const method = typeof f.verification_method === 'string' ? f.verification_method.trim() : '';
-    if (f.status === 'open' && f.fix_commit_sha) err(at, 'open findings must not have a fix_commit_sha (R3)');
+    // A fix is a commit, or — for non-code fixes such as repository settings —
+    // an explicit fix_reference (e.g. a ruleset id). Never neither.
+    const hasFixRef = typeof f.fix_reference === 'string' && f.fix_reference.trim() !== '';
+    if (f.status === 'open' && (f.fix_commit_sha || hasFixRef)) err(at, 'open findings must not have a fix_commit_sha or fix_reference (R3)');
     if (['fixed', 'verified'].includes(f.status)) {
-      if (!f.fix_commit_sha) err(at, `${f.status} requires fix_commit_sha (R4)`);
+      if (!f.fix_commit_sha && !hasFixRef) err(at, `${f.status} requires fix_commit_sha or fix_reference (R4)`);
       if (!method) err(at, `${f.status} requires verification_method (R4)`);
     }
     if (f.status === 'verified') {
       if (!INDEPENDENT_VERIFIERS.includes(f.reviewer)) err(at, `verified requires an independent verifier (${INDEPENDENT_VERIFIERS.join(' or ')}); the developer cannot verify their own fix (R5)`);
       const m = typeof f.verification_url === 'string' ? f.verification_url.match(REVIEW_URL_RE) : null;
       if (!f.verification_url) err(at, 'verified requires verification_url linking to the verifying review (R5)');
-      else if (!m || (f.pr && Number(m[1]) !== f.pr)) err(at, `verification_url must link to a review on ${f.pr ? `pull/${f.pr}` : 'a pull request'} (R5)`);
+      else {
+        // The review must be on the finding's own PR or an explicitly related one.
+        const prs = [f.pr, ...(Array.isArray(f.related_prs) ? f.related_prs : [])].filter(Number.isInteger);
+        const where = prs.length ? `pull/${prs.length > 1 ? `${prs.slice(0, -1).join(', ')} or ${prs.at(-1)}` : prs[0]}` : 'a pull request';
+        if (!m || (prs.length && !prs.includes(Number(m[1])))) err(at, `verification_url must link to a review on ${where} (R5)`);
+      }
     }
     if (f.status === 'accepted_risk') {
       if (f.reviewer !== 'Olivier') err(at, 'accepted_risk must be accepted by Olivier, the decision maker (R6)');
@@ -111,7 +126,9 @@ export function validateLedger(ledger, { now = Date.now(), commitExists = null }
     // R7 — time order.
     const t = isRealUtc(f.timestamp) ? Date.parse(f.timestamp) : null;
     const found = isRealUtc(f.found_at) ? Date.parse(f.found_at) : null;
-    if (t != null && t > now + 5 * 60 * 1000) err(at, 'timestamp is in the future (R7)');
+    // No tolerance: a record dated after the validator's clock is in the future (CT-0014).
+    if (t != null && t > now) err(at, 'timestamp is in the future (R7)');
+    if (found != null && found > now) err(at, 'found_at is in the future (R7)');
     if (t != null && found != null && found > t) err(at, 'found_at is after timestamp (R7)');
 
     // R8 — a fix is a different commit from the one the finding was seen on.

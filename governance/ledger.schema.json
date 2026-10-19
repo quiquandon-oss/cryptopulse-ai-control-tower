@@ -47,7 +47,9 @@
         "reviewer": { "enum": ["ChatGPT", "Claude", "Gemini", "Olivier"], "description": "Who established the current status. Controlled identities (docs/EVIDENCE_MODEL.md §2): Claude = developer, ChatGPT = reviewer, Gemini = planner, Olivier = decision maker. All four post through one GitHub account, so the label is the identity of record." },
         "found_at": { "$ref": "#/$defs/timestamp" },
         "fix_commit_sha": { "oneOf": [{ "$ref": "#/$defs/sha" }, { "type": "null" }] },
+        "fix_reference": { "type": "string", "minLength": 1, "description": "For fixes that are not commits (e.g. repository settings): a precise reference such as a ruleset id. R4 requires fix_commit_sha or fix_reference for fixed/verified." },
         "pr": { "type": "integer", "minimum": 1 },
+        "related_prs": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1 }, "description": "Other PRs where the finding was fixed or verified (R5 accepts a verification_url on pr or any of these)." },
         "source_url": { "type": "string", "pattern": "^https://github\\.com/quiquandon-oss/" },
         "verification_url": { "type": "string", "pattern": "^https://github\\.com/quiquandon-oss/[^/]+/pull/\\d+#(pullrequestreview-\\d+|discussion_r\\d+|issuecomment-\\d+)$", "description": "Link to the review/comment that verified the fix. Required when status is verified." }
       }

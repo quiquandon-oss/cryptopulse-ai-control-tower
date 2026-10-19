@@ -126,3 +126,46 @@ test('#5 reviewer must be a known identity; verified needs an independent review
   rejects({ ...verified, verification_url: 'https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/commit/abc' }, /review on/);
   rejects({ ...verified, verification_url: 'https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/7#pullrequestreview-1' }, /pull\/6/);
 });
+
+// --- CT-0014 (ChatGPT re-review 5564041614): R7 had a 5-minute future tolerance ---
+
+test('CT-0014: any future timestamp or found_at is rejected (no tolerance)', () => {
+  const now = Date.parse('2026-10-18T12:00:00Z');
+  const v = (f) => validateLedger({ schema_version: 1, findings: [f] }, { now });
+  const at = (ms) => new Date(ms).toISOString().replace('.000Z', 'Z');
+  // Ledger timestamps have 1 s resolution, so "+1 ms" is the next representable instant: +1 s.
+  for (const ahead of [1000, 60_000, 4 * 60_000, 3_600_000]) {
+    const errs = v({ ...base(), timestamp: at(now + ahead), found_at: '2026-10-18T11:00:00Z' });
+    assert.ok(errs.some((e) => /timestamp is in the future \(R7\)/.test(e)), `timestamp +${ahead} ms: ${JSON.stringify(errs)}`);
+    const errs2 = v({ ...base(), timestamp: at(now + ahead), found_at: at(now + ahead) });
+    assert.ok(errs2.some((e) => /found_at is in the future \(R7\)/.test(e)), `found_at +${ahead} ms`);
+  }
+  assert.deepEqual(v({ ...base(), timestamp: at(now), found_at: at(now - 1000) }), [], 'timestamp === now is valid');
+  // Exactly 1 ms ahead: the recorded instant is 1 ms after the validator's clock.
+  const oneMsAhead = validateLedger({ schema_version: 1, findings: [{ ...base(), timestamp: at(now), found_at: at(now - 1000) }] }, { now: now - 1 });
+  assert.ok(oneMsAhead.some((e) => /timestamp is in the future \(R7\)/.test(e)), `timestamp 1 ms ahead: ${JSON.stringify(oneMsAhead)}`);
+});
+
+test('related_prs: verification may come from a related PR, never an unrelated one', () => {
+  const url = (n) => `https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/${n}#pullrequestreview-1`;
+  const verified = { ...base(), status: 'verified', reviewer: 'ChatGPT', pr: 3, related_prs: [8, 9], verification_url: url(8) };
+  assert.deepEqual(check(verified), []);
+  rejects({ ...verified, verification_url: url(7) }, /pull\/3, 8 or 9/);
+  rejects({ ...verified, related_prs: [] , verification_url: url(8) }, /pull\/3/);
+  rejects({ ...verified, related_prs: [8, 8] }, /related_prs/);
+  rejects({ ...verified, related_prs: ['8'] }, /related_prs/);
+  rejects({ ...verified, related_prs: [3] }, /related_prs must not repeat pr/);
+});
+
+// --- Non-code fixes (CT-0013: a GitHub ruleset, no commit) ---
+
+test('fix_reference: a configuration fix can be recorded without a commit, never with neither', () => {
+  const cfg = { ...base(), fix_commit_sha: null, fix_reference: 'GitHub ruleset 25350881 (main: require CI checks)' };
+  assert.deepEqual(check(cfg), []);
+  rejects({ ...cfg, fix_reference: '' }, /fix_commit_sha or fix_reference \(R4\)/);
+  rejects({ ...cfg, fix_reference: '   ' }, /fix_commit_sha or fix_reference \(R4\)/);
+  rejects({ ...base(), fix_commit_sha: null }, /fix_commit_sha or fix_reference \(R4\)/);
+  rejects({ ...cfg, fix_reference: 42 }, /fix_reference must be a non-empty string/);
+  rejects({ ...cfg, status: 'open' }, /open findings must not have a fix_commit_sha or fix_reference \(R3\)/);
+  rejects({ ...cfg, fix_reference: 'token = ghp_abcdefghijklmnopqrstuvwxyz0123456789' }, /R9/);
+});
