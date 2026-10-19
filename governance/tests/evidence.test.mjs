@@ -49,9 +49,9 @@ test('current ledger: control tower findings gate is PASS (every medium+ finding
   // CT-0013 and CT-0014 verified by ChatGPT (PR #10 review 5564108534).
   assert.equal(gate.state, 'PASS');
   assert.deepEqual(gate.blocking, []);
-  // Low-severity items stay listed, never hidden: CT-0004 fixed/unverified, CT-0006 open.
-  assert.deepEqual(gate.unverified, ['CT-0004']);
-  assert.deepEqual(gate.openLow, ['CT-0006']);
+  // Low-severity fixes stay listed until verified, never hidden (CT-0006 fixed in PR #12).
+  assert.deepEqual(gate.unverified, ['CT-0004', 'CT-0006']);
+  assert.deepEqual(gate.openLow, []);
 });
 
 test('freshnessState', () => {
