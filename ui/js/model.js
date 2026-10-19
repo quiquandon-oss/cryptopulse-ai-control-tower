@@ -46,7 +46,10 @@ export function matchPull(taskId, pulls) {
 export function deriveWorkflow(task, pr, reviews, reviewsError = null) {
   const gate = (state, detail, extra = {}) => ({ state, detail, ...extra });
   // state: done | pending | rejected | untracked | locked | loading | error
-  const g1 = gate('done', `Task file ${task.file}`, { link: task.htmlUrl });
+  // A task file that failed to load is still a known task; its plan is unknown.
+  const g1 = task.loadError
+    ? gate('error', `Could not load task file ${task.file}`, { error: task.loadError, link: task.htmlUrl })
+    : gate('done', `Task file ${task.file}`, { link: task.htmlUrl });
 
   const g2 = pr
     ? gate('done', `PR #${pr.number}: ${pr.title}`, { link: pr.html_url })

@@ -3,9 +3,10 @@
 // and fails independently of the others.
 //
 // Resource keys:
-//   tasks, pulls, pages, v1, v2, v3, v4, runs:<repo>, reviews:<pr>, checks:<sha>
+//   tasks, pulls, pages, ledger, v1, v2, v3, v4, runs:<repo>, reviews:<pr>, checks:<sha>
 import { GITHUB, VERSIONS } from './config.js';
 import { listTasks, listPulls, listReviews, listCheckRuns, latestRun } from './sources/github.js';
+import { loadLedger } from './sources/governance.js';
 import { loadV1 } from './sources/v1.js';
 import { loadV2 } from './sources/v2.js';
 import { loadV3 } from './sources/v3.js';
@@ -15,6 +16,7 @@ const STATIC_LOADERS = {
   tasks: listTasks,
   pulls: listPulls,
   pages: () => latestRun(GITHUB.controlTower.repo, GITHUB.controlTower.pagesWorkflow),
+  ledger: loadLedger,
   v1: loadV1,
   v2: loadV2,
   v3: loadV3,

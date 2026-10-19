@@ -168,9 +168,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* ---- Pages -------------------------------------------------------------- */
 .page { display: flex; flex-direction: column; gap: var(--gap); max-width: 1100px; }
 .page__title { font-size: 22px; }
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+.stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--gap); }
 .stat { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--tone); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; }
 .stat--blue { --tone: var(--blue); } .stat--yellow { --tone: var(--yellow); } .stat--purple { --tone: var(--purple); } .stat--green { --tone: var(--green); }
+.stat--red { --tone: var(--red); } .stat--neutral { --tone: var(--line); }
+a.stat { color: inherit; } a.stat:hover { text-decoration: none; border-color: var(--tone); }
+.stat__value--word { font-size: 18px; overflow-wrap: anywhere; }
 .stat__value { font-size: 28px; font-weight: 800; }
 .stat__label { color: var(--muted); }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
@@ -304,6 +307,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .versions { grid-template-columns: minmax(0, 1fr); }
   .gates--readonly .gate { grid-template-columns: minmax(0, 1fr); }
   .gate__state { justify-self: start; }
-  .bottomnav { grid-template-columns: repeat(5, 1fr); }
+  .bottomnav { grid-template-columns: repeat(6, 1fr); }
   .bottomnav__item { font-size: 11px; }
 }
+
+/* ---- Governance (TASK-INT-002) ------------------------------------------ */
+.gate-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.counts { display: flex; flex-wrap: wrap; gap: 6px; }
+.evidence-links a { margin-right: 8px; }
+.table td.finding-desc { white-space: normal; min-width: 280px; color: var(--muted); }

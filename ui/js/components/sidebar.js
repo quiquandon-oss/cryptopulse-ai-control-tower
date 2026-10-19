@@ -9,6 +9,7 @@ const LINKS = [
   { label: 'Task History', href: '#/tasks/history', key: 'tasks:history' },
   { label: 'CryptoPulse V1–V4', href: '#/projects', key: 'projects' },
   { label: 'Pull Requests', href: '#/prs', key: 'prs' },
+  { label: 'Governance', href: '#/governance', key: 'governance' },
   { label: 'Agent Status', href: '#/agents', key: 'agents' },
   { label: 'Knowledge Base', href: '#/knowledge', key: 'knowledge' },
   { label: 'Templates', href: '#/templates', key: 'templates' },

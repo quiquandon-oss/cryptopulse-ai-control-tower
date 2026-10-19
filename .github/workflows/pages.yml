@@ -16,6 +16,7 @@ on:
       - 'ui/**'
       - 'docs/**'
       - 'tasks/**'
+      - 'governance/evidence.mjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -42,6 +43,10 @@ jobs:
         run: |
           mkdir -p _site
           cp -r ui docs tasks _site/
+          # Release-gate logic the UI imports (ui/js/sources/governance.js).
+          # Only this module: the ledger is read live from main.
+          mkdir -p _site/governance
+          cp governance/evidence.mjs _site/governance/
           # Local-only helper scripts are not part of the site.
           find _site -name '*.py' -delete
           # Tests are not part of the site.

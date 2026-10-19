@@ -6,11 +6,12 @@
 //   GitHub's unauthenticated rate limit. Cached data is real data from an
 //   earlier successful request; callers label it with its fetch time.
 // - Tracks GitHub's remaining rate-limit budget from response headers.
-import { CACHE_TTL_MS, REQUEST_TIMEOUT_MS, FORBIDDEN_PATHS, allowedBackendUrls, allowedGithubPrefixes } from '../config.js';
+import { CACHE_TTL_MS, REQUEST_TIMEOUT_MS, FORBIDDEN_PATHS, allowedBackendUrls, allowedGithubPrefixes, allowedGithubFiles } from '../config.js';
 
 const CACHE_PREFIX = 'ct-cache-v1:';
 const BACKEND_URLS = allowedBackendUrls();
 const GITHUB_PREFIXES = allowedGithubPrefixes();
+const GITHUB_FILES = allowedGithubFiles();
 
 export const githubRate = { remaining: null, limit: null, resetAt: null };
 
@@ -29,7 +30,7 @@ export function isAllowedUrl(url) {
   if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return false;
   if (FORBIDDEN_PATHS.some((p) => parsed.pathname === p || parsed.pathname.startsWith(`${p}/`))) return false;
   const normalized = parsed.origin + parsed.pathname + parsed.search;
-  if (BACKEND_URLS.has(normalized)) return true;
+  if (BACKEND_URLS.has(normalized) || GITHUB_FILES.has(normalized)) return true;
   // GitHub: prefix match on the normalized URL, and no traversal segments.
   if (parsed.pathname.split('/').some((seg) => seg === '..' || seg === '.')) return false;
   return GITHUB_PREFIXES.some((prefix) => normalized.startsWith(prefix));

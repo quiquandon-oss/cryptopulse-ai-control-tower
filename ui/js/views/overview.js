@@ -7,6 +7,7 @@ import { githubRate } from '../lib/http.js';
 import { age } from '../lib/status.js';
 import { statusTone } from '../components/rail.js';
 import { sourceNotice, asOf, errorText } from '../components/source.js';
+import { overallGate, GATE_TONE } from './governance.js';
 
 const VERSION_TONE = { ok: 'green', warn: 'yellow', down: 'red' };
 const VERSION_LABEL = { ok: 'Healthy', warn: 'Attention', down: 'Unreachable' };
@@ -19,8 +20,10 @@ function versionHealth(store, v) {
   return { status: entry.data.status, data: entry.data };
 }
 
-function stat(label, value, tone) {
-  return h('div', { class: `stat stat--${tone}` }, h('span', { class: 'stat__value' }, value), h('span', { class: 'stat__label' }, label));
+function stat(label, value, tone, href = null) {
+  const word = typeof value === 'string' && value.length > 6;
+  return h(href ? 'a' : 'div', { class: `stat stat--${tone}`, href },
+    h('span', { class: `stat__value${word ? ' stat__value--word' : ''}` }, value), h('span', { class: 'stat__label' }, label));
 }
 
 export function dashboardView(route, ctx) {
@@ -29,7 +32,9 @@ export function dashboardView(route, ctx) {
   const healthy = health.filter(([, hh]) => hh.status === 'ok').length;
   const loadingHealth = health.some(([, hh]) => hh.status === 'loading');
   const open = sel.status === 'ok' ? sel.items.filter(isOpen) : null;
-  const n = (v) => (v == null ? '…' : v);
+  // '…' while loading; '—' when the task source failed (its card says why).
+  const n = (v) => (v == null ? (sel.status === 'error' ? '—' : '…') : v);
+  const gate = overallGate(ctx.store);
 
   return h('div', { class: 'page' },
     h('h1', { class: 'page__title' }, 'Metrics'),
@@ -37,7 +42,8 @@ export function dashboardView(route, ctx) {
       stat('Open tasks', n(open && open.length), 'blue'),
       stat('Waiting on Olivier', n(open && open.filter((i) => i.workflow.waitingOn === 'olivier').length), 'yellow'),
       stat('Versions healthy', loadingHealth ? '…' : `${healthy}/${VERSIONS.length}`, healthy === VERSIONS.length ? 'green' : 'yellow'),
-      stat('GitHub API calls left', n(githubRate.remaining), 'purple')),
+      stat('Release gate', gate.status === 'loading' ? '…' : gate.state, gate.status === 'loading' ? 'neutral' : GATE_TONE[gate.state], '#/governance'),
+      stat('GitHub API calls left', githubRate.remaining ?? '…', 'purple')),
     h('div', { class: 'grid-2' },
       card('CryptoPulse versions', h('ul', { class: 'agents' }, health.map(([v, hh]) => h('li', { class: 'agent-card' },
         h('span', { class: 'avatar avatar--lg avatar--blue', 'aria-hidden': 'true' }, v.id),

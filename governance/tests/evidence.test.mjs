@@ -46,12 +46,12 @@ test('findingsState rules', () => {
 test('current ledger: control tower findings gate is PASS (every medium+ finding independently verified)', () => {
   const ledger = JSON.parse(readFileSync(join(GOV, 'ledger.json'), 'utf8'));
   const gate = findingsGate(ledger, CT);
-  // CT-0013 and CT-0014 verified by ChatGPT (PR #10 review 5564108534).
+  // CT-0006 and CT-0015 verified by ChatGPT (PR #12 review 5568180084).
   assert.equal(gate.state, 'PASS');
   assert.deepEqual(gate.blocking, []);
-  // Low-severity items stay listed, never hidden: CT-0004 fixed/unverified, CT-0006 open.
+  // Low-severity fixes stay listed until verified, never hidden.
   assert.deepEqual(gate.unverified, ['CT-0004']);
-  assert.deepEqual(gate.openLow, ['CT-0006']);
+  assert.deepEqual(gate.openLow, []);
 });
 
 test('freshnessState', () => {

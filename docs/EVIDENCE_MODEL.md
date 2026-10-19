@@ -90,6 +90,8 @@ tolerance: evidence dated in the future cannot be trusted (finding CT-0010).
 | version `ok` | Projects | `PASS` |
 | version `warn` (stale, empty or degraded backend) | Projects | `STALE` |
 | version `down` (unreachable) | Projects | `UNAVAILABLE` |
+| ledger loaded | Governance, Metrics | `findingsGate()` result (this module, not a copy) |
+| ledger unreachable or malformed | Governance, Metrics | `UNAVAILABLE` |
 
 ## 2. Review ledger
 

@@ -27,15 +27,25 @@ export function parseTask(markdown, fileName) {
   };
 }
 
-/** Task files in tasks/active, parsed. */
+/**
+ * Task files in tasks/active, parsed. Each file loads independently (CT-0006):
+ * one unreadable file becomes a task with `loadError` set (ID from its file
+ * name), and the others still load. Only a failed directory listing fails
+ * the whole list, since without it no task is known.
+ */
 export async function listTasks() {
   const listing = await fetchData(`${repoApi(CT.repo)}/contents/${CT.tasksDir}?ref=${CT.branch}`);
   const files = (Array.isArray(listing.data) ? listing.data : [])
     .filter((f) => f.type === 'file' && /\.md$/i.test(f.name));
-  const tasks = await Promise.all(files.map(async (f) => {
+  const results = await Promise.allSettled(files.map(async (f) => {
     // Raw file host does not count against the API rate limit.
     const raw = await fetchData(`${GITHUB.raw}/${GITHUB.owner}/${CT.repo}/${CT.branch}/${CT.tasksDir}/${encodeURIComponent(f.name)}`, { as: 'text' });
-    return { ...parseTask(raw.data, f.name), file: f.name, htmlUrl: f.html_url };
+    return parseTask(raw.data, f.name);
+  }));
+  const tasks = results.map((r, i) => ({
+    ...(r.status === 'fulfilled' ? r.value : { ...parseTask('', files[i].name), loadError: r.reason }),
+    file: files[i].name,
+    htmlUrl: files[i].html_url,
   }));
   return { tasks, at: listing.at, cached: listing.cached };
 }

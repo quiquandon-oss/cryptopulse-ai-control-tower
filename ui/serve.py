@@ -2,7 +2,7 @@
 """Local preview server for the Control Tower UI testbed.
 
 Serves only the folders the UI needs (ui/, docs/, tasks/) from the repo
-root. Everything else -- .git, dotfiles, any other path -- returns 404, so
+root, plus governance/evidence.mjs (the release-gate logic the UI imports). Everything else -- .git, dotfiles, any other path -- returns 404, so
 running this on your Wi-Fi never exposes repository internals.
 
 Usage (from anywhere):
@@ -22,9 +22,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ALLOWED_DIRS = tuple((REPO_ROOT / d).resolve() for d in ("ui", "docs", "tasks"))
+# Single files outside those folders, matched exactly (mirrors pages.yml).
+ALLOWED_FILES = ((REPO_ROOT / "governance" / "evidence.mjs").resolve(),)
 
 # Python's table lacks the web app manifest type Chrome expects.
 mimetypes.add_type("application/manifest+json", ".webmanifest")
+# ES modules must be served with a JavaScript type.
+mimetypes.add_type("text/javascript", ".mjs")
 
 
 def is_safe_url_path(path):
@@ -56,7 +60,7 @@ class TestbedHandler(http.server.SimpleHTTPRequestHandler):
         # The file actually served must sit inside an allowed folder
         # (resolve() also follows symlinks), not merely inside the repo.
         target = Path(self.translate_path(path)).resolve()
-        return any(target == d or d in target.parents for d in ALLOWED_DIRS)
+        return target in ALLOWED_FILES or any(target == d or d in target.parents for d in ALLOWED_DIRS)
 
     def send_head(self):
         path = self._path_only()
@@ -108,7 +112,7 @@ def main():
     if args.lan:
         ip = lan_address()
         print(f"On your phone (same Wi-Fi): http://{ip or '<this-computer-ip>'}:{args.port}/ui/")
-        print("Serving ui/, docs/ and tasks/ only. Press Ctrl+C to stop.")
+        print("Serving ui/, docs/, tasks/ and governance/evidence.mjs only. Press Ctrl+C to stop.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

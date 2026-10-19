@@ -22,7 +22,7 @@ const { chromium, devices } = createRequire(import.meta.url)('playwright');
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const ROUTES = ['workflow', 'dashboard', 'tasks/active', 'tasks/history', 'projects', 'agents', 'prs',
-  'knowledge', 'templates', 'instructions', 'settings'];
+  'governance', 'knowledge', 'templates', 'instructions', 'settings'];
 
 let server;
 let browser;
@@ -101,9 +101,13 @@ for (const [label, options] of [
       assert.ok(!/\bmock(?!up)|CP-2026-|a1b2c3d/i.test(r.text), `${r.route}: no mock data`);
     }
     // Data views must report the outage instead of showing substitute data.
-    for (const route of ['workflow', 'projects', 'prs']) {
+    for (const route of ['workflow', 'projects', 'prs', 'governance']) {
       assert.ok(results.find((r) => r.route === route).errorNotices > 0, `${route}: shows an unavailable notice`);
     }
+    // An unreachable ledger is never a pass.
+    const gov = results.find((r) => r.route === 'governance').text;
+    assert.ok(/UNAVAILABLE/.test(gov) && !/\bPASS\b/.test(gov), 'governance: gate UNAVAILABLE when the ledger is unreachable');
+    assert.ok(outbound.some((r) => r.url.endsWith('/main/governance/ledger.json')), 'requested the review ledger');
 
     // The app tried to reach its sources, and only via allow-listed GETs.
     assert.ok(outbound.length > 0, 'app attempted to load live data');
