@@ -93,17 +93,18 @@
       "commit_sha": "f29f7760a753cd5221b87921d865209a39028b66",
       "description": "listTasks() fetches every task file with Promise.all, so one failed file fetch makes the whole task list unavailable instead of isolating that file (non-blocking resilience note).",
       "severity": "low",
-      "status": "fixed",
-      "verification_method": "Fix 0f951a0 (PR #12, TASK-INT-002): listTasks() uses Promise.allSettled; an unreadable task file becomes a task with loadError (ID from file name, plan gate 'error', 'Task file unavailable' pill) and the other tasks still load; only a failed directory listing fails the list. Tests: ui/tests/governance.test.mjs 'CT-0006' cases (one HTTP 500 file among three; failed listing still rejects). Author-checked only; awaiting ChatGPT independent review.",
-      "timestamp": "2026-10-19T06:22:22Z",
-      "reviewer": "Claude",
+      "status": "verified",
+      "verification_method": "Fix 0f951a0 (PR #12, TASK-INT-002): listTasks() uses Promise.allSettled; an unreadable task file becomes a task with loadError (ID from file name, plan gate 'error', 'Task file unavailable' pill) and the other tasks still load; only a failed directory listing fails the list. Tests: ui/tests/governance.test.mjs 'CT-0006' cases (one HTTP 500 file among three; failed listing still rejects). ChatGPT independent review (pullrequestreview-5568180084 on head c9169a1): VERIFIED; allSettled isolation, loadError task with plan gate error and no misleading waiting agent; tests cover an isolated HTTP 500 and a failed listing; CI run 39210047252 all success.",
+      "timestamp": "2026-10-19T07:22:56Z",
+      "reviewer": "ChatGPT",
       "found_at": "2026-10-18T14:45:58Z",
       "fix_commit_sha": "0f951a0288874e7c3e6783d834e5b292a1470064",
       "pr": 7,
       "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/7#pullrequestreview-5563476807",
       "related_prs": [
         12
-      ]
+      ],
+      "verification_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/12#pullrequestreview-5568180084"
     },
     {
       "finding_id": "CT-0007",
@@ -258,14 +259,15 @@
       "commit_sha": "f6286f155bd0070beacd239654c3262ee48b58d4",
       "description": "Governance view safeLink() accepted ledger URLs by string prefix (https://github.com/quiquandon-oss/), so a value such as https://github.com/quiquandon-oss/../../attacker/repo passed and the browser normalized it outside the owner; fix-commit and PR links were built from the ledger's repository field before any check.",
       "severity": "medium",
-      "status": "fixed",
-      "verification_method": "Fix b869b51 (PR #12): safeLink() parses with new URL(), requires https and origin exactly https://github.com, no credentials, no '%' or backslash, no parser rewriting (href unchanged), pathname under /quiquandon-oss/; commit/PR links validate repository, 40-hex SHA and positive-integer PR first. Reproduced before the fix (prefix check true, normalized to https://github.com/attacker/repo). Regression tests in ui/tests/governance.test.mjs fail against the previous code (traversal and repository cases) and pass now; all links in the real ledger still render. Severity set to medium (security, same class as CT-0014) so it blocks until independently verified. Author-checked only; awaiting ChatGPT independent re-review.",
-      "timestamp": "2026-10-19T06:27:31Z",
-      "reviewer": "Claude",
+      "status": "verified",
+      "verification_method": "Fix b869b51 (PR #12): safeLink() parses with new URL(), requires https and origin exactly https://github.com, no credentials, no '%' or backslash, no parser rewriting (href unchanged), pathname under /quiquandon-oss/; commit/PR links validate repository, 40-hex SHA and positive-integer PR first. Reproduced before the fix (prefix check true, normalized to https://github.com/attacker/repo). Regression tests in ui/tests/governance.test.mjs fail against the previous code (traversal and repository cases) and pass now; all links in the real ledger still render. Severity set to medium (security, same class as CT-0014) so it blocks until independently verified. ChatGPT independent re-review (pullrequestreview-5568180084 on head c9169a1): VERIFIED; parsed-URL validation, exact origin, owner path, rejection of credentials/percent-encoding/backslashes/parser rewriting, validated commit/PR fields; regression tests and real-ledger link test reviewed; CI run 39210047252 all success.",
+      "timestamp": "2026-10-19T07:22:56Z",
+      "reviewer": "ChatGPT",
       "found_at": "2026-10-19T06:25:34Z",
       "fix_commit_sha": "b869b51922ab3f51c351daa767bb5877e3414257",
       "pr": 12,
-      "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/12#pullrequestreview-5567649987"
+      "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/12#pullrequestreview-5567649987",
+      "verification_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/12#pullrequestreview-5568180084"
     }
   ]
 }
