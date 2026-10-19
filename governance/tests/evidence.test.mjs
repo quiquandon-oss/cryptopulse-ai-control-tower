@@ -43,14 +43,15 @@ test('findingsState rules', () => {
   assert.equal(findingsState({ findings: [f('critical', 'open')] }, 'quiquandon-oss/CryptoPulseV4'), 'PASS', 'scoped to repository');
 });
 
-test('current ledger: control tower findings gate is UNKNOWN (CT-0013, CT-0014 fixed, not yet verified)', () => {
+test('current ledger: control tower findings gate is PASS (every medium+ finding independently verified)', () => {
   const ledger = JSON.parse(readFileSync(join(GOV, 'ledger.json'), 'utf8'));
   const gate = findingsGate(ledger, CT);
-  // Nothing open blocks any more, but medium fixes are unverified: never PASS yet.
-  assert.equal(gate.state, 'UNKNOWN');
+  // CT-0013 and CT-0014 verified by ChatGPT (PR #10 review 5564108534).
+  assert.equal(gate.state, 'PASS');
   assert.deepEqual(gate.blocking, []);
-  // Fixed but not independently verified: listed, never silently passed.
-  assert.deepEqual(gate.unverified, ['CT-0004', 'CT-0013', 'CT-0014']);
+  // Low-severity items stay listed, never hidden: CT-0004 fixed/unverified, CT-0006 open.
+  assert.deepEqual(gate.unverified, ['CT-0004']);
+  assert.deepEqual(gate.openLow, ['CT-0006']);
 });
 
 test('freshnessState', () => {

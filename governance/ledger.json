@@ -215,17 +215,18 @@
       "commit_sha": "6cc0b0d88f85dfac6f9a8db7bd4f541d2cfe6d05",
       "description": "CI checks (Node tests, Python tests, Browser smoke) report on pull requests but are not required: no branch protection or ruleset on main enforces them, so a PR can still be merged with failing or missing checks.",
       "severity": "medium",
-      "status": "fixed",
-      "verification_method": "Fix applied by Olivier in repository settings (no commit): ruleset 25350881, enforcement active, target default branch, no bypass actors; rules deletion, non_fast_forward and required_status_checks = Node tests, Python tests, Browser smoke (all integration 15368, GitHub Actions). First version required \"Node test\" (no such check): PR #10 was mergeable_state \"blocked\" with all three checks green on 1aeb469 (run 39150136211). After Olivier corrected it to \"Node tests\" (ruleset updated 2026-10-18T17:37:30Z), GET /rules/branches/main returns the three checks and PR #10 became \"clean\" with no new commit. Read back via the GitHub API by Claude. Author-checked only; awaiting ChatGPT independent re-review.",
-      "timestamp": "2026-10-18T17:38:50Z",
-      "reviewer": "Claude",
+      "status": "verified",
+      "verification_method": "Fix applied by Olivier in repository settings (no commit): ruleset 25350881, enforcement active, target default branch, no bypass actors; rules deletion, non_fast_forward and required_status_checks = Node tests, Python tests, Browser smoke (all integration 15368, GitHub Actions). First version required \"Node test\" (no such check): PR #10 was mergeable_state \"blocked\" with all three checks green on 1aeb469 (run 39150136211). After Olivier corrected it to \"Node tests\" (ruleset updated 2026-10-18T17:37:30Z), GET /rules/branches/main returns the three checks and PR #10 became \"clean\" with no new commit. Read back via the GitHub API by Claude. ChatGPT independent re-review (pullrequestreview-5564108534 on head 83c36da): VERIFIED; checked run 39150572012 (Node tests, Python tests, Browser smoke all success) and the blocked-to-clean timeline on PR #10. ChatGPT could not query the ruleset settings endpoint itself, so the exact configuration (active, default branch, no bypass, three check names) rests on Claude's API read-back in PR #10 issuecomment-6253036158.",
+      "timestamp": "2026-10-18T17:43:07Z",
+      "reviewer": "ChatGPT",
       "found_at": "2026-10-18T17:17:59Z",
       "fix_commit_sha": null,
       "pr": 9,
       "related_prs": [
         10
       ],
-      "fix_reference": "GitHub ruleset 25350881 \"main: require CI checks\" (configured by Olivier)"
+      "fix_reference": "GitHub ruleset 25350881 \"main: require CI checks\" (configured by Olivier)",
+      "verification_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/10#pullrequestreview-5564108534"
     },
     {
       "finding_id": "CT-0014",
@@ -234,17 +235,18 @@
       "commit_sha": "1e4936914ea9c6f1a85a097fbb5e6b5b36c74e73",
       "description": "Ledger validator rule R7 rejected a timestamp only if it was more than 5 minutes in the future (t > now + 5 min), contradicting docs/EVIDENCE_MODEL.md ('timestamp not in the future'); found_at had no future check at all.",
       "severity": "medium",
-      "status": "fixed",
-      "verification_method": "Fix 63db4c8 (PR #10): R7 rejects any timestamp or found_at later than the validator clock, no tolerance. Tests: +1 s/+1 min/+4 min/+1 h for both fields, timestamp exactly 1 ms ahead of the clock, and timestamp === now accepted; the new test fails against the validator on main eb51bb6 (timestamp +1 s produced no error). Severity set to medium (same class as CT-0010) so it blocks until independently verified. Author-checked only; awaiting ChatGPT independent re-review.",
-      "timestamp": "2026-10-18T17:32:51Z",
-      "reviewer": "Claude",
+      "status": "verified",
+      "verification_method": "Fix 63db4c8 (PR #10): R7 rejects any timestamp or found_at later than the validator clock, no tolerance. Tests: +1 s/+1 min/+4 min/+1 h for both fields, timestamp exactly 1 ms ahead of the clock, and timestamp === now accepted; the new test fails against the validator on main eb51bb6 (timestamp +1 s produced no error). Severity set to medium (same class as CT-0010) so it blocks until independently verified. ChatGPT independent re-review (pullrequestreview-5564108534 on head 83c36da): VERIFIED; R7 rejects timestamp > now and found_at > now with no tolerance, keeps found_at <= timestamp; regression tests reviewed; ledger validation and governance tests passed in run 39150572012.",
+      "timestamp": "2026-10-18T17:43:07Z",
+      "reviewer": "ChatGPT",
       "found_at": "2026-10-18T17:22:35Z",
       "fix_commit_sha": "63db4c854cd91dee8f77104d68282a9a8a4e0fba",
       "pr": 8,
       "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/8#pullrequestreview-5564041614",
       "related_prs": [
         10
-      ]
+      ],
+      "verification_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/10#pullrequestreview-5564108534"
     }
   ]
 }
