@@ -250,6 +250,22 @@
         10
       ],
       "verification_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/10#pullrequestreview-5564108534"
+    },
+    {
+      "finding_id": "CT-0015",
+      "repository": "quiquandon-oss/cryptopulse-ai-control-tower",
+      "file_path": "ui/js/views/governance.js",
+      "commit_sha": "f6286f155bd0070beacd239654c3262ee48b58d4",
+      "description": "Governance view safeLink() accepted ledger URLs by string prefix (https://github.com/quiquandon-oss/), so a value such as https://github.com/quiquandon-oss/../../attacker/repo passed and the browser normalized it outside the owner; fix-commit and PR links were built from the ledger's repository field before any check.",
+      "severity": "medium",
+      "status": "fixed",
+      "verification_method": "Fix b869b51 (PR #12): safeLink() parses with new URL(), requires https and origin exactly https://github.com, no credentials, no '%' or backslash, no parser rewriting (href unchanged), pathname under /quiquandon-oss/; commit/PR links validate repository, 40-hex SHA and positive-integer PR first. Reproduced before the fix (prefix check true, normalized to https://github.com/attacker/repo). Regression tests in ui/tests/governance.test.mjs fail against the previous code (traversal and repository cases) and pass now; all links in the real ledger still render. Severity set to medium (security, same class as CT-0014) so it blocks until independently verified. Author-checked only; awaiting ChatGPT independent re-review.",
+      "timestamp": "2026-10-19T06:27:31Z",
+      "reviewer": "Claude",
+      "found_at": "2026-10-19T06:25:34Z",
+      "fix_commit_sha": "b869b51922ab3f51c351daa767bb5877e3414257",
+      "pr": 12,
+      "source_url": "https://github.com/quiquandon-oss/cryptopulse-ai-control-tower/pull/12#pullrequestreview-5567649987"
     }
   ]
 }
