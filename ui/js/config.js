@@ -16,7 +16,7 @@ export const GITHUB = deepFreeze({
   api: 'https://api.github.com',
   raw: 'https://raw.githubusercontent.com',
   owner: 'quiquandon-oss',
-  controlTower: { repo: 'cryptopulse-ai-control-tower', branch: 'main', tasksDir: 'tasks/active', pagesWorkflow: 'pages.yml' },
+  controlTower: { repo: 'cryptopulse-ai-control-tower', branch: 'main', tasksDir: 'tasks/active', pagesWorkflow: 'pages.yml', ledger: 'governance/ledger.json' },
 });
 
 // One entry per CryptoPulse version. Each version module imports only its own.
@@ -99,4 +99,10 @@ export function allowedGithubPrefixes() {
     ...repos.map((r) => `${GITHUB.api}/repos/${GITHUB.owner}/${r}/`),
     `${GITHUB.raw}/${GITHUB.owner}/${GITHUB.controlTower.repo}/${GITHUB.controlTower.branch}/${GITHUB.controlTower.tasksDir}/`,
   ];
+}
+
+/** Single files the UI may request, matched exactly (no prefix): the review ledger. */
+export function allowedGithubFiles() {
+  const ct = GITHUB.controlTower;
+  return new Set([`${GITHUB.raw}/${GITHUB.owner}/${ct.repo}/${ct.branch}/${ct.ledger}`]);
 }

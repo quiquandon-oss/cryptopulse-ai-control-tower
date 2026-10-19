@@ -5,7 +5,7 @@
 // GET requests are handled: live data from GitHub and the CryptoPulse workers
 // is cross-origin, so it always goes to the network (never served from here).
 
-const CACHE = 'ct-ui-v3';
+const CACHE = 'ct-ui-v4';
 const SHELL = [
   './',
   './index.html',
@@ -24,6 +24,9 @@ const SHELL = [
   './js/sources/v2.js',
   './js/sources/v3.js',
   './js/sources/v4.js',
+  './js/sources/governance.js',
+  // Release-gate logic shared with CI (served beside ui/, see pages.yml).
+  '../governance/evidence.mjs',
   './js/components/header.js',
   './js/components/sidebar.js',
   './js/components/rail.js',
@@ -33,6 +36,7 @@ const SHELL = [
   './js/views/tasks.js',
   './js/views/overview.js',
   './js/views/docs.js',
+  './js/views/governance.js',
   './icons/icon-192.png',
 ];
 

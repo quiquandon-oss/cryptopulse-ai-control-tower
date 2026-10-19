@@ -6,6 +6,7 @@ const ITEMS = [
   { label: 'Tasks', icon: '☰', href: '#/tasks/active', views: ['tasks'] },
   { label: 'Projects', icon: '▦', href: '#/projects', views: ['projects'] },
   { label: 'Agents', icon: '●', href: '#/agents', views: ['agents'] },
+  { label: 'Gate', icon: '✓', href: '#/governance', views: ['governance'] },
   { label: 'Metrics', icon: '▤', href: '#/dashboard', views: ['dashboard'] },
 ];
 

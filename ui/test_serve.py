@@ -40,7 +40,8 @@ class ServeRestrictionsTest(unittest.TestCase):
 
     def test_allowed_files_are_served(self):
         for path in ("/ui/", "/ui/index.html", "/ui/js/app.js",
-                     "/docs/CLAUDE_CODE_SETUP.md", "/tasks/TEMPLATE_TASK.md"):
+                     "/docs/CLAUDE_CODE_SETUP.md", "/tasks/TEMPLATE_TASK.md",
+                     "/governance/evidence.mjs"):
             with self.subTest(path=path):
                 self.assertEqual(self.get(path)[0], 200)
 
@@ -51,6 +52,19 @@ class ServeRestrictionsTest(unittest.TestCase):
         status, ctype, _ = self.get("/ui/manifest.webmanifest")
         self.assertEqual(status, 200)
         self.assertEqual(ctype, "application/manifest+json")
+
+    def test_module_mime_type(self):
+        status, ctype, _ = self.get("/governance/evidence.mjs")
+        self.assertEqual(status, 200)
+        self.assertEqual(ctype, "text/javascript")
+
+    def test_only_evidence_module_served_from_governance(self):
+        # The rest of governance/ (ledger, validator, tests) is not part of the site.
+        for path in ("/governance/", "/governance/ledger.json", "/governance/validate-ledger.mjs",
+                     "/governance/tests/evidence.test.mjs", "/governance/evidence.mjs/",
+                     "/governance/%2e%2e/.git/config", "/ui/../governance/ledger.json"):
+            with self.subTest(path=path):
+                self.assertEqual(self.get(path)[0], 404, path)
 
     def test_repository_internals_are_not_served(self):
         blocked = [

@@ -30,7 +30,8 @@ const MARKERS = [
 ];
 
 test('no mock, seed or placeholder data in shipped files', () => {
-  const files = shipped();
+  // Also shipped: the release-gate module the UI imports (see pages.yml).
+  const files = [...shipped(), '../governance/evidence.mjs'];
   assert.ok(files.includes('js/app.js') && files.includes('index.html'), 'scan found the app');
   for (const file of files) {
     const src = readFileSync(join(UI, file), 'utf8');

@@ -2,7 +2,7 @@
 //
 // Routes (hash-based so the app works from any static file server):
 //   #/workflow[/<taskId>]  #/dashboard  #/tasks/active  #/tasks/history
-//   #/projects  #/prs  #/agents  #/knowledge  #/templates  #/instructions  #/settings
+//   #/projects  #/prs  #/governance  #/agents  #/knowledge  #/templates  #/instructions  #/settings
 import { h } from './dom.js';
 import { createStore } from './state.js';
 import { header } from './components/header.js';
@@ -11,6 +11,7 @@ import { bottomNav } from './components/bottomnav.js';
 import { workflowView } from './views/workflow.js';
 import { tasksView } from './views/tasks.js';
 import { dashboardView, agentsView, projectsView, prsView } from './views/overview.js';
+import { governanceView } from './views/governance.js';
 import { knowledgeView, templatesView, instructionsView, settingsView } from './views/docs.js';
 
 const VIEWS = {
@@ -19,6 +20,7 @@ const VIEWS = {
   tasks: tasksView,
   projects: projectsView,
   prs: prsView,
+  governance: governanceView,
   agents: agentsView,
   knowledge: knowledgeView,
   templates: templatesView,

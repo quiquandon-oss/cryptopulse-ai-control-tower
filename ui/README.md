@@ -20,6 +20,7 @@ substitutes made-up data.
 | **V3** — no backend of its own, **via V2** | `/challenger-recent?limit=5` (the route V3 consumes) | everything else |
 | **V4** `cryptopulse-v4` (own D1) | `/api/health`, `/api/signals?limit=5`, `/api/market-pulse` | `/api/portfolio*` (private), `/api/ingest` |
 | **GitHub** (public API, no token) | task files in `tasks/active/`, PRs, reviews, check runs, Actions runs of the 6 CryptoPulse repos | any write |
+| **Review ledger** (raw file host) | exactly `main/governance/ledger.json` of this repo | any other `governance/` file, other branches |
 
 Each version module (`js/sources/v1.js` … `v4.js`) imports only its own
 config entry and requests only its own allow-listed URLs, so no data or state
@@ -44,6 +45,17 @@ reload*.
 Decisions are made on GitHub; the app reflects them. *New task on GitHub*
 opens GitHub's new-file page in `tasks/active/`.
 
+**Governance (release gate).** `#/governance` reads the review ledger live and
+computes the gate with `governance/evidence.mjs` — the same module CI tests,
+deployed beside `ui/` — so the UI and the ledger tooling cannot disagree. An
+unreachable or malformed ledger shows **UNAVAILABLE**, never PASS. The Metrics
+page shows the same gate as a stat.
+
+**Each source fails on its own.** A version backend, the ledger, or a single
+task file that cannot be loaded is shown as unavailable in its own card or
+row; the rest of the page keeps working. Only a failed `tasks/active/`
+listing hides the task list, since without it no task is known.
+
 ## Try it
 
 **Live (GitHub Pages):** https://quiquandon-oss.github.io/cryptopulse-ai-control-tower/ui/
@@ -65,7 +77,7 @@ python3 ui/serve.py --lan      # also prints a URL for a phone on the same Wi-Fi
 python3 ui/serve.py --port 9000
 ```
 
-`serve.py` serves only `ui/`, `docs/` and `tasks/`; `.git`, dotfiles, path
+`serve.py` serves only `ui/`, `docs/`, `tasks/` and `governance/evidence.mjs`; `.git`, dotfiles, path
 traversal and directory listings return 404, so `--lan` never exposes the
 repository. Stop with **Ctrl+C**.
 
@@ -83,6 +95,9 @@ python3 -m unittest ui/test_serve.py -v  # serve.py path restrictions
 - `purge.test.mjs` — shipped files contain no mock, seed, fake CI/deploy or
   placeholder data.
 - `model.test.mjs` — gate derivation and task-file parsing.
+- `governance.test.mjs` — ledger URL allow-listed exactly, gate equals
+  `findingsGate`, unreachable/malformed ledger rejected; one failing task file
+  does not fail the list (CT-0006).
 
 Tests are not deployed to GitHub Pages.
 
@@ -98,7 +113,7 @@ install.
 
 ## Mobile behaviour (≤ 820 px)
 
-- **Bottom tab bar:** Workflow, Tasks, Projects, Agents, Metrics. Respects the
+- **Bottom tab bar:** Workflow, Tasks, Projects, Agents, Gate, Metrics. Respects the
   iPhone home-indicator area.
 - **Workflow pane switch:** *Gates* or *Details & CI* (task info, PR, CI,
   deployment), one at a time instead of one long scroll.
@@ -130,7 +145,8 @@ ui/
     │   └── status.js       # Shared status shape + time helpers
     ├── sources/
     │   ├── v1.js … v4.js   # One module per CryptoPulse version (own backend only)
-    │   └── github.js       # Public GitHub metadata + task-file parser
+    │   ├── github.js       # Public GitHub metadata + task-file parser
+    │   └── governance.js   # Review ledger + release gate (governance/evidence.mjs)
     ├── components/
     │   ├── header.js       # Brand, tabs, live indicator, refresh
     │   ├── sidebar.js      # Navigation, participants
@@ -141,6 +157,7 @@ ui/
         ├── workflow.js     # Read-only five-gate tracker for one task
         ├── tasks.js        # Active Tasks, Task History
         ├── overview.js     # Metrics, Agent Status, Projects (V1–V4), Pull Requests
+        ├── governance.js   # Release gate + review findings
         └── docs.js         # Knowledge Base, Templates, Agent Instructions, Settings
 ```
 
@@ -149,11 +166,12 @@ ui/
 | Hash | View |
 |---|---|
 | `#/workflow/<taskId>` | Read-only gate tracker (default: first open task) |
-| `#/dashboard` | Metrics: open tasks, decisions waiting, versions healthy, GitHub budget |
+| `#/dashboard` | Metrics: open tasks, decisions waiting, versions healthy, release gate, GitHub budget |
 | `#/tasks/active`, `#/tasks/history` | Task files with live PR state |
 | `#/projects` | CryptoPulse V1–V4 status cards + latest CI per repo |
 | `#/agents` | Who each open task is waiting on |
 | `#/prs` | Control Tower pull requests |
+| `#/governance` | Release gate per repository + review findings from the ledger |
 | `#/knowledge`, `#/templates`, `#/instructions`, `#/settings` | Reference pages, data sources, cache |
 
 ## Not in scope
