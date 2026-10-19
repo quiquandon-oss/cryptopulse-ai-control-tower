@@ -14,9 +14,36 @@ const SEVERITY_TONE = { critical: 'red', high: 'red', medium: 'yellow', low: 'ne
 const STATUS_ORDER = ['open', 'accepted_risk', 'fixed', 'verified'];
 
 // Ledger text is data: only links into this owner's GitHub repos are rendered.
-const GITHUB_LINK = `https://github.com/${GITHUB.owner}/`;
-const safeLink = (url) => (typeof url === 'string' && url.startsWith(GITHUB_LINK) ? url : null);
-const ext = (url, text) => (safeLink(url) ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, text) : null);
+// The URL is parsed, not prefix-matched: '..' or encoded segments could
+// otherwise normalize outside the owner (ChatGPT review, PR #12).
+const OWNER_PATH = `/${GITHUB.owner}/`;
+
+/** The URL if it is a plain https://github.com/<owner>/… link, else null. */
+export function safeLink(url) {
+  if (typeof url !== 'string' || url.includes('%') || url.includes('\\')) return null;
+  let parsed;
+  try { parsed = new URL(url); } catch { return null; }
+  if (parsed.protocol !== 'https:' || parsed.origin !== 'https://github.com' || parsed.username || parsed.password) return null;
+  // Refuse anything the parser had to rewrite (dot segments, case, etc.).
+  if (parsed.href !== url || !parsed.pathname.startsWith(OWNER_PATH)) return null;
+  return parsed.href;
+}
+
+const REPO_RE = new RegExp(`^${GITHUB.owner}/[A-Za-z0-9_-][A-Za-z0-9._-]*$`);
+/** Commit and PR links built from ledger fields, each part validated first. */
+export function fixCommitLink(f) {
+  return REPO_RE.test(f.repository) && /^[0-9a-f]{40}$/.test(f.fix_commit_sha || '')
+    ? safeLink(`https://github.com/${f.repository}/commit/${f.fix_commit_sha}`) : null;
+}
+export function prLink(f) {
+  return REPO_RE.test(f.repository) && Number.isInteger(f.pr) && f.pr > 0
+    ? safeLink(`https://github.com/${f.repository}/pull/${f.pr}`) : null;
+}
+
+const ext = (url, text) => {
+  const href = safeLink(url);
+  return href ? h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text) : null;
+};
 
 /**
  * Overall gate across every repository in the ledger, for the Metrics stat.
@@ -58,8 +85,8 @@ function findingsTable(findings) {
       h('td', { class: 'evidence-links' },
         ext(f.source_url, 'found'),
         ext(f.verification_url, 'verified'),
-        f.fix_commit_sha && ext(`https://github.com/${f.repository}/commit/${f.fix_commit_sha}`, f.fix_commit_sha.slice(0, 7)),
-        Number.isInteger(f.pr) && ext(`https://github.com/${f.repository}/pull/${f.pr}`, `#${f.pr}`)),
+        ext(fixCommitLink(f), (f.fix_commit_sha || '').slice(0, 7)),
+        ext(prLink(f), `#${f.pr}`)),
       h('td', { class: 'finding-desc' }, f.description))))));
 }
 

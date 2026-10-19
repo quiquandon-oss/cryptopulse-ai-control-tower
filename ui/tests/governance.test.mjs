@@ -97,3 +97,56 @@ test('CT-0006: a failed directory listing still fails the list (no task is known
   stubFetch(t, () => json({}, 500));
   await assert.rejects(listTasks(), { kind: 'http' });
 });
+
+// --- Ledger-controlled links (ChatGPT review of PR #12) ---
+const { safeLink, fixCommitLink, prLink } = await import('../js/views/governance.js');
+const GH = 'https://github.com/quiquandon-oss';
+
+test('safeLink accepts plain links into the owner\'s repos', () => {
+  for (const url of [
+    `${GH}/cryptopulse-ai-control-tower/pull/12#pullrequestreview-5567649987`,
+    `${GH}/cryptopulse-ai-control-tower/commit/${'a'.repeat(40)}`,
+    `${GH}/CryptoPulseV4/pull/3`,
+  ]) assert.equal(safeLink(url), url, url);
+});
+
+test('safeLink refuses traversal, encoded traversal, credentials and non-GitHub URLs', () => {
+  for (const url of [
+    // literal traversal: passed the old prefix check, normalizes to /attacker/…
+    `${GH}/../../attacker/repo`, `${GH}/../attacker`, `${GH}/x/../../attacker`, `${GH}/./x`,
+    // encoded traversal / separators
+    `${GH}/%2e%2e/attacker`, `${GH}/%2E%2E/attacker`, `${GH}/..%2fattacker`, `${GH}/x/%2e%2e%2f%2e%2e%2fattacker`,
+    `${GH}/x\\..\\..\\attacker`, `${GH}/x/..%5c..%5cattacker`,
+    // credentials, other hosts, schemes and ports
+    'https://user:pass@github.com/quiquandon-oss/x', 'https://quiquandon-oss@github.com/quiquandon-oss/x',
+    'https://github.com.evil.example/quiquandon-oss/x', 'https://evil.example/https://github.com/quiquandon-oss/x',
+    'https://gist.github.com/quiquandon-oss/x', 'https://GITHUB.com/quiquandon-oss/x', 'https://github.com:444/quiquandon-oss/x',
+    'http://github.com/quiquandon-oss/x', 'javascript:alert(1)//https://github.com/quiquandon-oss/',
+    // other owners, prefix look-alikes, non-strings
+    'https://github.com/attacker/repo', 'https://github.com/quiquandon-oss-evil/x', 'https://github.com/quiquandon-oss',
+    '', null, undefined, 42, {},
+  ]) assert.equal(safeLink(url), null, String(url));
+});
+
+test('commit and PR links validate the ledger fields they are built from', () => {
+  const ok = { repository: 'quiquandon-oss/cryptopulse-ai-control-tower', fix_commit_sha: 'b'.repeat(40), pr: 12 };
+  assert.equal(fixCommitLink(ok), `${GH}/cryptopulse-ai-control-tower/commit/${'b'.repeat(40)}`);
+  assert.equal(prLink(ok), `${GH}/cryptopulse-ai-control-tower/pull/12`);
+  for (const repository of ['quiquandon-oss/../attacker/x', 'quiquandon-oss/..', 'quiquandon-oss/.', 'attacker/x',
+    'quiquandon-oss/x/y', 'quiquandon-oss/%2e%2e', 'quiquandon-oss/x?y', 'quiquandon-oss/x#y', '', null]) {
+    assert.equal(fixCommitLink({ ...ok, repository }), null, `commit: ${repository}`);
+    assert.equal(prLink({ ...ok, repository }), null, `pr: ${repository}`);
+  }
+  for (const fix_commit_sha of ['b'.repeat(39), 'B'.repeat(40), `${'b'.repeat(40)}/../../x`, null]) {
+    assert.equal(fixCommitLink({ ...ok, fix_commit_sha }), null, String(fix_commit_sha));
+  }
+  for (const pr of [0, -1, 1.5, '12', null]) assert.equal(prLink({ ...ok, pr }), null, String(pr));
+});
+
+test('every link the real ledger provides is accepted (no evidence silently dropped)', () => {
+  for (const f of realLedger().findings) {
+    for (const key of ['source_url', 'verification_url']) if (f[key]) assert.equal(safeLink(f[key]), f[key], `${f.finding_id} ${key}`);
+    if (f.fix_commit_sha) assert.ok(fixCommitLink(f), `${f.finding_id} fix commit`);
+    assert.ok(prLink(f), `${f.finding_id} pr`);
+  }
+});
